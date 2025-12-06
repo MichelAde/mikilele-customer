@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase, Event, TicketType } from '@/lib/supabase'
 import EventCard from '@/components/EventCard'
 import SearchBar from '@/components/SearchBar'
+import CartButton from '@/components/CartButton'
+import CartSidebar from '@/components/CartSidebar'
 import { Loader2 } from 'lucide-react'
 
 export default function HomePage() {
@@ -94,6 +96,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -105,7 +108,8 @@ export default function HomePage() {
                 Discover amazing events and experiences
               </p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
+              <CartButton />
               <button className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium">
                 Sign In
               </button>
@@ -117,7 +121,9 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Search Bar */}
         <SearchBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -125,6 +131,7 @@ export default function HomePage() {
           setSelectedCategory={setSelectedCategory}
         />
 
+        {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600">
             {filteredEvents.length === 0 ? (
@@ -138,6 +145,7 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Events Grid */}
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg mb-4">
@@ -166,6 +174,10 @@ export default function HomePage() {
         )}
       </main>
 
+      {/* Cart Sidebar */}
+      <CartSidebar />
+
+      {/* Footer */}
       <footer className="bg-gray-900 text-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

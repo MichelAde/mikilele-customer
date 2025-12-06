@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Calendar, MapPin, Clock, Users, ArrowLeft, Tag } from 'lucide-react'
+import { Calendar, MapPin, Users, ArrowLeft, Tag } from 'lucide-react'
+import TicketSelector from '@/components/TicketSelector'
+import CartButton from '@/components/CartButton'
+import CartSidebar from '@/components/CartSidebar'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -63,14 +66,19 @@ export default async function EventDetailPage({ params }: PageProps) {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link 
-            href="/"
-            className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Events
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Mikilele Events</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <Link 
+                href="/"
+                className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium mb-4"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Events
+              </Link>
+              <h1 className="text-3xl font-bold text-gray-900">Mikilele Events</h1>
+            </div>
+            <CartButton />
+          </div>
         </div>
       </header>
 
@@ -174,76 +182,41 @@ export default async function EventDetailPage({ params }: PageProps) {
           {/* Sidebar - Tickets */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Get Tickets</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Tickets</h2>
 
               {tickets && tickets.length > 0 ? (
                 <div className="space-y-4">
                   {tickets.map((ticket) => {
                     const available = ticket.quantity_total - ticket.quantity_sold
-                    const soldOut = available <= 0
 
                     return (
-                      <div
+                      <TicketSelector
                         key={ticket.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{ticket.name}</h3>
-                            {ticket.description && (
-                              <p className="text-sm text-gray-600 mt-1">
-                                {ticket.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right ml-4">
-                            <p className="text-2xl font-bold text-gray-900">
-                              ${ticket.price}
-                            </p>
-                            <p className="text-xs text-gray-500">{ticket.currency}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-3">
-                          <p className="text-sm text-gray-600">
-                            {soldOut ? (
-                              <span className="text-red-600 font-medium">Sold Out</span>
-                            ) : (
-                              <span>
-                                {available} of {ticket.quantity_total} available
-                              </span>
-                            )}
-                          </p>
-                          <button
-                            disabled={soldOut}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                              soldOut
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                            }`}
-                          >
-                            {soldOut ? 'Sold Out' : 'Select'}
-                          </button>
-                        </div>
-                      </div>
+                        ticketId={ticket.id}
+                        ticketName={ticket.name}
+                        ticketDescription={ticket.description}
+                        eventId={event.id}
+                        eventTitle={event.title}
+                        eventSlug={event.slug}
+                        eventDate={event.start_datetime}
+                        price={ticket.price}
+                        currency={ticket.currency}
+                        available={available}
+                        quantityTotal={ticket.quantity_total}
+                      />
                     )
                   })}
                 </div>
               ) : (
                 <p className="text-gray-600">No tickets available at this time.</p>
               )}
-
-              {/* Add to Calendar */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Add to Calendar
-                </button>
-              </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Cart Sidebar */}
+      <CartSidebar />
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white mt-20">
