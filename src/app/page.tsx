@@ -46,7 +46,7 @@ export default function HomePage() {
         if (ticketsError) throw ticketsError
 
         const prices: Record<string, number> = {}
-        ticketsData?.forEach((ticket: TicketType) => {
+        ticketsData?.forEach((ticket) => {
           if (!prices[ticket.event_id] || ticket.price < prices[ticket.event_id]) {
             prices[ticket.event_id] = ticket.price
           }
