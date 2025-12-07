@@ -1,12 +1,53 @@
 'use client'
 
 import { useCartStore } from '@/lib/cart-store'
-import { X, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react'
+import { X, Minus, Plus, Trash2, ShoppingBag, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { loadStripe } from '@stripe/stripe-js'
+import { useState } from 'react'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 export default function CartSidebar() {
   const { items, isOpen, closeCart, updateQuantity, removeItem, getTotalPrice, clearCart } = useCartStore()
+  const [isLoading, setIsLoading] = useState(false)
   const totalPrice = getTotalPrice()
+
+  const handleCheckout = async () => {
+    setIsLoading(true)
+  
+    try {
+      console.log('Starting checkout with items:', items)
+  
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items }),
+      })
+  
+      console.log('Response status:', response.status)
+  
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Checkout failed')
+      }
+  
+      const data = await response.json()
+      console.log('Checkout response:', data)
+  
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL received')
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error)
+      alert(`Checkout failed: ${error.message}. Please try again.`)
+      setIsLoading(false)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -49,7 +90,6 @@ export default function CartSidebar() {
                   key={item.ticketId}
                   className="border border-gray-200 rounded-lg p-4"
                 >
-                  {/* Event Info */}
                   <div className="mb-3">
                     <Link
                       href={`/events/${item.eventSlug}`}
@@ -68,7 +108,6 @@ export default function CartSidebar() {
                     </p>
                   </div>
 
-                  {/* Price & Quantity */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button
@@ -110,7 +149,6 @@ export default function CartSidebar() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="border-t border-gray-200 p-6 space-y-4">
-            {/* Total */}
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">Total</span>
               <span className="text-2xl font-bold text-gray-900">
@@ -118,14 +156,25 @@ export default function CartSidebar() {
               </span>
             </div>
 
-            {/* Buttons */}
             <div className="space-y-3">
-              <button className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors">
-                Proceed to Checkout
+              <button
+                onClick={handleCheckout}
+                disabled={isLoading}
+                className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Proceed to Checkout'
+                )}
               </button>
               <button
                 onClick={clearCart}
-                className="w-full border border-gray-300 text-gray-700 font-medium py-3 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
+                className="w-full border border-gray-300 text-gray-700 font-medium py-3 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Clear Cart
               </button>
