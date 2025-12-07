@@ -50,11 +50,16 @@ export async function POST(request: NextRequest) {
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/cancel`,
+      client_reference_id: items[0]?.userId || null,  
       metadata: {
         cartItems: JSON.stringify(items.map((item: any) => ({
           ticketId: item.ticketId,
+          ticketName: item.ticketName,          
           eventId: item.eventId,
+          eventTitle: item.eventTitle,          
+          eventDate: item.eventDate,            
           quantity: item.quantity,
+          price: item.price,                     
         }))),
       },
     })

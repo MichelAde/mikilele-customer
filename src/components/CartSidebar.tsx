@@ -1,6 +1,7 @@
 'use client'
 
 import { useCartStore } from '@/lib/cart-store'
+import { useAuth } from '@/lib/auth-context' 
 import { X, Minus, Plus, Trash2, ShoppingBag, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
@@ -10,6 +11,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 
 export default function CartSidebar() {
   const { items, isOpen, closeCart, updateQuantity, removeItem, getTotalPrice, clearCart } = useCartStore()
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const totalPrice = getTotalPrice()
 
@@ -17,25 +19,25 @@ export default function CartSidebar() {
     setIsLoading(true)
   
     try {
-      console.log('Starting checkout with items:', items)
+      // Add user ID to items
+      const itemsWithUser = items.map(item => ({
+        ...item,
+        userId: user?.id || null
+      }))
   
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items: itemsWithUser }), 
       })
   
-      console.log('Response status:', response.status)
+      const data = await response.json()
   
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Checkout failed')
+        throw new Error(data.error || 'Checkout failed')
       }
-  
-      const data = await response.json()
-      console.log('Checkout response:', data)
   
       if (data.url) {
         window.location.href = data.url

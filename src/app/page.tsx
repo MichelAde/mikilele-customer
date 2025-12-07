@@ -8,7 +8,8 @@ import CartButton from '@/components/CartButton'
 import CartSidebar from '@/components/CartSidebar'
 import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/lib/auth-context'
-import { Loader2, LogOut, User } from 'lucide-react'
+import { Loader2, LogOut, User, Ticket } from 'lucide-react'
+import Link from 'next/link'
 
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -102,6 +103,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -118,6 +120,13 @@ export default function HomePage() {
               
               {user ? (
                 <div className="flex items-center gap-3">
+                  <Link
+                    href="/my-tickets"
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    My Tickets
+                  </Link>
                   <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                     <User className="w-4 h-4 text-gray-600" />
                     <span className="text-sm text-gray-700">
@@ -159,7 +168,9 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Search Bar */}
         <SearchBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -167,6 +178,7 @@ export default function HomePage() {
           setSelectedCategory={setSelectedCategory}
         />
 
+        {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600">
             {filteredEvents.length === 0 ? (
@@ -180,6 +192,7 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Events Grid */}
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg mb-4">
@@ -208,16 +221,17 @@ export default function HomePage() {
         )}
       </main>
 
+      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         defaultView={authView}
       />
 
+      {/* Cart Sidebar */}
       <CartSidebar />
 
       {/* Footer */}
-
       <footer className="bg-gray-900 text-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
