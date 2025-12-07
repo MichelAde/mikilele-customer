@@ -6,7 +6,9 @@ import EventCard from '@/components/EventCard'
 import SearchBar from '@/components/SearchBar'
 import CartButton from '@/components/CartButton'
 import CartSidebar from '@/components/CartSidebar'
-import { Loader2 } from 'lucide-react'
+import AuthModal from '@/components/AuthModal'
+import { useAuth } from '@/lib/auth-context'
+import { Loader2, LogOut, User } from 'lucide-react'
 
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -15,6 +17,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authView, setAuthView] = useState<'signin' | 'signup'>('signin')
+
+  const { user, signOut } = useAuth()
 
   useEffect(() => {
     fetchEvents()
@@ -109,12 +115,45 @@ export default function HomePage() {
             </div>
             <div className="flex gap-4 items-center">
               <CartButton />
-              <button className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium">
-                Sign In
-              </button>
-              <button className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-                Get Started
-              </button>
+              
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                    <User className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm text-gray-700">
+                      {user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 font-medium transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setAuthView('signin')
+                      setAuthModalOpen(true)
+                    }}
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthView('signup')
+                      setAuthModalOpen(true)
+                    }}
+                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -169,7 +208,15 @@ export default function HomePage() {
         )}
       </main>
 
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultView={authView}
+      />
+
       <CartSidebar />
+
+      {/* Footer */}
 
       <footer className="bg-gray-900 text-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

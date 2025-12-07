@@ -1,40 +1,61 @@
-import { notFound } from 'next/navigation'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { notFound, useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Calendar, MapPin, Users, ArrowLeft, Tag } from 'lucide-react'
+import { Calendar, MapPin, Users, ArrowLeft, Tag, Loader2, LogOut, User as UserIcon } from 'lucide-react'
 import TicketSelector from '@/components/TicketSelector'
 import CartButton from '@/components/CartButton'
 import CartSidebar from '@/components/CartSidebar'
+import AuthModal from '@/components/AuthModal'
+import { useAuth } from '@/lib/auth-context'
 
-interface PageProps {
-  params: Promise<{ slug: string }>
-}
+export default function EventDetailPage() {
+  const params = useParams()
+  const slug = params.slug as string
+  const { user, signOut } = useAuth()
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  
+  const [event, setEvent] = useState<any>(null)
+  const [tickets, setTickets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function EventDetailPage({ params }: PageProps) {
-  const { slug } = await params
+  useEffect(() => {
+    fetchEvent()
+  }, [slug])
 
-  // Fetch event details
-  const { data: event, error: eventError } = await supabase
-    .from('events')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single()
+  const fetchEvent = async () => {
+    try {
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .single()
 
-  if (eventError || !event) {
-    notFound()
+      if (eventError || !eventData) {
+        notFound()
+      }
+
+      setEvent(eventData)
+
+      const { data: ticketsData } = await supabase
+        .from('ticket_types')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .eq('is_available', true)
+        .order('sort_order', { ascending: true })
+
+      setTickets(ticketsData || [])
+    } catch (error) {
+      console.error('Error fetching event:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Fetch ticket types for this event
-  const { data: tickets } = await supabase
-    .from('ticket_types')
-    .select('*')
-    .eq('event_id', event.id)
-    .eq('is_available', true)
-    .order('sort_order', { ascending: true })
-
-  // Format date and time
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -54,9 +75,23 @@ export default async function EventDetailPage({ params }: PageProps) {
     })
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading event...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!event) {
+    notFound()
+  }
+
   const imageUrl = event.cover_image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200'
 
-  // Calculate available tickets
   const totalAvailable = tickets?.reduce((sum, ticket) => {
     return sum + (ticket.quantity_total - ticket.quantity_sold)
   }, 0) || 0
@@ -77,7 +112,34 @@ export default async function EventDetailPage({ params }: PageProps) {
               </Link>
               <h1 className="text-3xl font-bold text-gray-900">Mikilele Events</h1>
             </div>
-            <CartButton />
+            <div className="flex items-center gap-4">
+              <CartButton />
+              
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                    <UserIcon className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm text-gray-700">
+                      {user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 font-medium transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -102,7 +164,6 @@ export default async function EventDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Title */}
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               {event.title}
             </h1>
@@ -214,6 +275,13 @@ export default async function EventDetailPage({ params }: PageProps) {
           </div>
         </div>
       </main>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultView="signin"
+      />
 
       {/* Cart Sidebar */}
       <CartSidebar />
