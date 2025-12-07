@@ -11,6 +11,7 @@ import CartButton from '@/components/CartButton'
 import CartSidebar from '@/components/CartSidebar'
 import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/lib/auth-context'
+import ShareButton from '@/components/ShareButton'
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -164,9 +165,16 @@ export default function EventDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              {event.title}
-            </h1>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h1 className="text-4xl font-bold text-gray-900 flex-1">
+                {event.title}
+              </h1>
+              <ShareButton
+                url={`/events/${event.slug}`}
+                title={event.title}
+                description={event.description?.slice(0, 160) || ''}
+              />
+            </div>
 
             {/* Event Details */}
             <div className="space-y-4 mb-8">
