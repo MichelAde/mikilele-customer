@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       
       console.log('Order data:', orderData)
 
-      const { data: order, error: orderError } = await supabase
+      const { data: order, error: orderError } = await supabaseAdmin
         .from('orders')
         .insert(orderData)
         .select()
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       })
 
       console.log('Creating order items...')
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await supabaseAdmin
         .from('order_items')
         .insert(orderItems)
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       console.log('Updating ticket quantities...')
       for (const item of cartItems) {
         try {
-          const { error: updateError } = await supabase.rpc(
+          const { error: updateError } = await supabaseAdmin.rpc(
             'increment_ticket_sold',
             {
               ticket_id: item.ticketId,
