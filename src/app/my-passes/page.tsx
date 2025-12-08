@@ -24,6 +24,7 @@ interface UserPass {
 
 interface PassRedemption {
   id: string
+  user_pass_id: string
   credits_used: number
   redeemed_at: string
   events: {

@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
           stripe_session_id: session.id,
           buyer_email: session.customer_details?.email || session.customer_email || null,
           buyer_name: session.customer_details?.name || null,
+          subtotal: (session.amount_subtotal || session.amount_total || 0) / 100,  // ADD THIS
           total: (session.amount_total || 0) / 100,
           currency: (session.currency?.toUpperCase() || 'CAD'),
           status: 'completed',
