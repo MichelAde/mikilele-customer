@@ -26,13 +26,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 })
   }
 
-  // Verify webhook secret exists
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.error('❌ STRIPE_WEBHOOK_SECRET not set')
     return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
   }
 
-  // Verify service role key exists
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set')
     return NextResponse.json({ error: 'Database credentials not configured' }, { status: 500 })
@@ -75,7 +73,6 @@ export async function POST(request: NextRequest) {
 
         console.log('Package details:', { packageId, credits, validityDays })
 
-        // Calculate expiry date
         let expiryDate = null
         if (validityDays) {
           const expiry = new Date()
@@ -84,7 +81,6 @@ export async function POST(request: NextRequest) {
           console.log('Calculated expiry:', expiryDate)
         }
 
-        // Create student package
         const packageData = {
           user_id: session.client_reference_id,
           package_id: packageId,
@@ -188,7 +184,7 @@ export async function POST(request: NextRequest) {
       // ==========================================
       // HANDLE REGULAR TICKET PURCHASES
       // ==========================================
-      else {
+      else if (session.metadata?.type === 'ticket_purchase' || !session.metadata?.type) {
         console.log('🎟️ Processing TICKET purchase')
         
         const cartItemsString = session.metadata?.cartItems
@@ -205,12 +201,37 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
         }
 
+        // OPTION 1: Validate user exists, use NULL if not found or not provided
+        let validUserId = null
+        
+        if (session.client_reference_id) {
+          console.log('🔍 Checking if user exists:', session.client_reference_id)
+          
+          try {
+            const { data: userExists, error: userCheckError } = await supabaseAdmin
+              .auth.admin.getUserById(session.client_reference_id)
+            
+            if (userExists && !userCheckError) {
+              validUserId = session.client_reference_id
+              console.log('✅ Valid user ID confirmed:', validUserId)
+            } else {
+              console.log('⚠️ User ID not found in auth.users, creating guest order')
+              console.log('User check error:', userCheckError)
+            }
+          } catch (e: any) {
+            console.log('⚠️ Error checking user existence:', e.message)
+            console.log('Creating guest order instead')
+          }
+        } else {
+          console.log('⚠️ No user ID provided, creating guest order')
+        }
+
         const orderData = {
-          user_id: session.client_reference_id || null,
+          user_id: validUserId, // Will be NULL for guest orders or invalid user IDs
           stripe_session_id: session.id,
           buyer_email: session.customer_details?.email || session.customer_email || null,
           buyer_name: session.customer_details?.name || null,
-          subtotal: (session.amount_subtotal || session.amount_total || 0) / 100,  // ADD THIS
+          subtotal: (session.amount_subtotal || session.amount_total || 0) / 100,
           total: (session.amount_total || 0) / 100,
           currency: (session.currency?.toUpperCase() || 'CAD'),
           status: 'completed',
@@ -288,7 +309,17 @@ export async function POST(request: NextRequest) {
           received: true, 
           success: true, 
           type: 'ticket',
-          order_id: order.id 
+          order_id: order.id,
+          guest_order: validUserId === null 
+        })
+      }
+
+      // Unknown type
+      else {
+        console.log('⚠️ Unknown purchase type:', session.metadata?.type)
+        return NextResponse.json({ 
+          received: true,
+          warning: 'Unknown purchase type' 
         })
       }
 
