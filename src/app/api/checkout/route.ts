@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/cancel`,
       client_reference_id: items[0]?.userId || null,  
       metadata: {
+        type: 'ticket_purchase',
         cartItems: JSON.stringify(items.map((item: any) => ({
           ticketId: item.ticketId,
           ticketName: item.ticketName,          
