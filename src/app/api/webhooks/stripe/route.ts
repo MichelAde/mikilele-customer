@@ -3,7 +3,6 @@ import { stripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-// Create admin client directly in webhook
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     )
     console.log('✅ Event verified:', event.type)
   } catch (err: any) {
-    console.error('❌ Webhook signature verification failed:', err.message)
+    console.error('❌ Verification failed:', err.message)
     return NextResponse.json({ error: 'Webhook error' }, { status: 400 })
   }
 
@@ -44,103 +43,144 @@ export async function POST(request: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session
 
     try {
-      console.log('📦 Session ID:', session.id)
-      console.log('💰 Amount:', session.amount_total)
-      console.log('👤 User ID:', session.client_reference_id)
+      console.log('📦 Processing session:', session.id)
+      console.log('Metadata:', session.metadata)
 
-      const cartItemsString = session.metadata?.cartItems
-      console.log('🛒 Cart metadata:', cartItemsString)
+      // Check if this is a pass purchase
+      if (session.metadata?.type === 'pass_purchase') {
+        console.log('🎫 Processing PASS purchase')
+        
+        const passTypeId = session.metadata.pass_type_id
+        const credits = parseInt(session.metadata.credits)
+        const validityDays = session.metadata.validity_days !== 'null' 
+          ? parseInt(session.metadata.validity_days) 
+          : null
 
-      if (!cartItemsString) {
-        console.error('❌ No cart items in metadata')
-        return NextResponse.json({ error: 'No cart items' }, { status: 400 })
-      }
+        // Calculate expiry date
+        let expiryDate = null
+        if (validityDays) {
+          const expiry = new Date()
+          expiry.setDate(expiry.getDate() + validityDays)
+          expiryDate = expiry.toISOString()
+        }
 
-      const cartItems = JSON.parse(cartItemsString)
-      console.log('📋 Cart items:', cartItems)
+        // Create user pass
+        const passData = {
+          user_id: session.client_reference_id,
+          pass_type_id: passTypeId,
+          credits_remaining: credits,
+          credits_total: credits,
+          purchase_date: new Date().toISOString(),
+          expiry_date: expiryDate,
+          status: 'active',
+          stripe_session_id: session.id,
+          amount_paid: (session.amount_total || 0) / 100,
+        }
 
-      if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        console.error('❌ Invalid cart items')
-        return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
-      }
+        console.log('Creating pass:', passData)
 
-      // Create order
-      const orderData = {
-        user_id: session.client_reference_id || null,
-        stripe_session_id: session.id,
-        buyer_email: session.customer_details?.email || session.customer_email || null,
-        buyer_name: session.customer_details?.name || null,
-        total: (session.amount_total || 0) / 100,
-        currency: (session.currency?.toUpperCase() || 'CAD'),
-        status: 'completed',
-      }
+        const { data: pass, error: passError } = await supabaseAdmin
+          .from('user_passes')
+          .insert(passData)
+          .select()
+          .single()
+
+        if (passError) {
+          console.error('❌ Pass creation error:', passError)
+          throw passError
+        }
+
+        console.log('✅ Pass created:', pass.id)
+        return NextResponse.json({ received: true, success: true, type: 'pass' })
+      } 
       
-      console.log('Creating order:', orderData)
+      // Handle regular ticket purchases
+      else {
+        console.log('🎟️ Processing TICKET purchase')
+        
+        const cartItemsString = session.metadata?.cartItems
+        if (!cartItemsString) {
+          console.error('❌ No cart items')
+          return NextResponse.json({ error: 'No cart items' }, { status: 400 })
+        }
 
-      const { data: order, error: orderError } = await supabaseAdmin
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single()
+        const cartItems = JSON.parse(cartItemsString)
+        if (!Array.isArray(cartItems) || cartItems.length === 0) {
+          console.error('❌ Invalid cart items')
+          return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
+        }
 
-      if (orderError) {
-        console.error('❌ Order error:', orderError)
-        throw orderError
-      }
+        // Create order with buyer info
+        const orderData = {
+          user_id: session.client_reference_id || null,
+          stripe_session_id: session.id,
+          buyer_email: session.customer_details?.email || session.customer_email || null,
+          buyer_name: session.customer_details?.name || null,
+          total: (session.amount_total || 0) / 100,
+          currency: (session.currency?.toUpperCase() || 'CAD'),
+          status: 'completed',
+        }
+        
+        console.log('Creating order:', orderData)
 
-      console.log('✅ Order created:', order.id)
+        const { data: order, error: orderError } = await supabaseAdmin
+          .from('orders')
+          .insert(orderData)
+          .select()
+          .single()
 
-      // Create order items
-      const orderItems = cartItems.map((item: any) => ({
-        order_id: order.id,
-        event_id: item.eventId,
-        ticket_type_id: item.ticketId,
-        quantity: item.quantity || 1,
-        price_per_ticket: item.price || 0,
-        ticket_name: item.ticketName || 'General Admission',
-        event_title: item.eventTitle || 'Event',
-        event_date: item.eventDate || new Date().toISOString(),
-      }))
+        if (orderError) {
+          console.error('❌ Order error:', orderError)
+          throw orderError
+        }
 
-      console.log('Creating order items:', orderItems)
+        console.log('✅ Order created:', order.id)
 
-      const { error: itemsError } = await supabaseAdmin
-        .from('order_items')
-        .insert(orderItems)
+        // Create order items
+        const orderItems = cartItems.map((item: any) => ({
+          order_id: order.id,
+          event_id: item.eventId,
+          ticket_type_id: item.ticketId,
+          quantity: item.quantity || 1,
+          price_per_ticket: item.price || 0,
+          ticket_name: item.ticketName || 'General Admission',
+          event_title: item.eventTitle || 'Event',
+          event_date: item.eventDate || new Date().toISOString(),
+        }))
 
-      if (itemsError) {
-        console.error('❌ Order items error:', itemsError)
-        throw itemsError
-      }
+        const { error: itemsError } = await supabaseAdmin
+          .from('order_items')
+          .insert(orderItems)
 
-      console.log('✅ Order items created')
+        if (itemsError) {
+          console.error('❌ Items error:', itemsError)
+          throw itemsError
+        }
 
-      // Update ticket quantities
-      for (const item of cartItems) {
-        try {
-          const { error } = await supabaseAdmin.rpc(
-            'increment_ticket_sold',
-            {
+        console.log('✅ Items created:', orderItems.length)
+
+        // Update ticket quantities
+        for (const item of cartItems) {
+          try {
+            await supabaseAdmin.rpc('increment_ticket_sold', {
               ticket_id: item.ticketId,
               quantity: item.quantity || 1,
-            }
-          )
-          if (error) {
-            console.error('⚠️ Ticket update warning:', error)
+            })
+          } catch (e) {
+            console.error('⚠️ Ticket update failed:', e)
           }
-        } catch (e) {
-          console.error('⚠️ Failed to update ticket:', e)
         }
+
+        console.log('✅ Ticket purchase complete')
+        return NextResponse.json({ received: true, success: true, type: 'ticket' })
       }
 
-      console.log('✅ Webhook complete')
-      return NextResponse.json({ received: true })
-
     } catch (error: any) {
-      console.error('❌ Processing error:', error)
+      console.error('❌ Processing failed:', error)
       return NextResponse.json({ 
         error: 'Processing failed',
-        details: error.message 
+        details: error.message,
+        hint: error.hint 
       }, { status: 500 })
     }
   }

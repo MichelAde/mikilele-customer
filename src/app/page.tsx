@@ -10,6 +10,7 @@ import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/lib/auth-context'
 import { Loader2, LogOut, User, Ticket } from 'lucide-react'
 import Link from 'next/link'
+import { Loader2, LogOut, User, Ticket } from 'lucide-react'
 
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -116,6 +117,20 @@ export default function HomePage() {
               </p>
             </div>
             <div className="flex gap-4 items-center">
+              <Link
+                href="/my-passes"
+                className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+              >
+                <Ticket className="w-4 h-4" />
+                My Passes
+              </Link>
+              <Link
+                href="/passes"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+              >
+                <Ticket className="w-4 h-4" />
+                Passes
+              </Link>
               <CartButton />
               
               {user ? (
