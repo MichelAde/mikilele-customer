@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
 
     try {
       console.log('📦 Processing session:', session.id)
-      console.log('Metadata:', session.metadata)
+      console.log('📋 Metadata:', session.metadata)
 
-      // Check if this is a pass purchase
+      // CHECK TYPE FIRST - BEFORE LOOKING FOR CART ITEMS
       if (session.metadata?.type === 'pass_purchase') {
         console.log('🎫 Processing PASS purchase')
         
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         
         const cartItemsString = session.metadata?.cartItems
         if (!cartItemsString) {
-          console.error('❌ No cart items')
+          console.error('❌ No cart items for ticket purchase')
           return NextResponse.json({ error: 'No cart items' }, { status: 400 })
         }
 
