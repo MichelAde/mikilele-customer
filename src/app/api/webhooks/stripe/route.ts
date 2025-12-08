@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
+// Create admin client with service role
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -15,7 +16,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
-  console.log('🔔 Webhook received')
+  console.log('🔔 Webhook received at:', new Date().toISOString())
   
   const body = await request.text()
   const sig = request.headers.get('stripe-signature')
@@ -25,18 +26,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 })
   }
 
+  // Verify webhook secret exists
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('❌ STRIPE_WEBHOOK_SECRET not set')
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
+  }
+
+  // Verify service role key exists
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set')
+    return NextResponse.json({ error: 'Database credentials not configured' }, { status: 500 })
+  }
+
   let event: Stripe.Event
 
   try {
     event = stripe.webhooks.constructEvent(
       body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     )
     console.log('✅ Event verified:', event.type)
   } catch (err: any) {
     console.error('❌ Verification failed:', err.message)
-    return NextResponse.json({ error: 'Webhook error' }, { status: 400 })
+    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -44,9 +57,13 @@ export async function POST(request: NextRequest) {
 
     try {
       console.log('📦 Processing session:', session.id)
-      console.log('📋 Metadata:', session.metadata)
+      console.log('📋 Metadata:', JSON.stringify(session.metadata, null, 2))
+      console.log('👤 Client reference:', session.client_reference_id)
+      console.log('💰 Amount:', session.amount_total)
 
-      // Handle CLASS PACKAGE purchases
+      // ==========================================
+      // HANDLE CLASS PACKAGE PURCHASES
+      // ==========================================
       if (session.metadata?.type === 'class_package_purchase') {
         console.log('💃 Processing CLASS PACKAGE purchase')
         
@@ -56,12 +73,15 @@ export async function POST(request: NextRequest) {
           ? parseInt(session.metadata.validity_days) 
           : null
 
+        console.log('Package details:', { packageId, credits, validityDays })
+
         // Calculate expiry date
         let expiryDate = null
         if (validityDays) {
           const expiry = new Date()
           expiry.setDate(expiry.getDate() + validityDays)
           expiryDate = expiry.toISOString()
+          console.log('Calculated expiry:', expiryDate)
         }
 
         // Create student package
@@ -77,7 +97,7 @@ export async function POST(request: NextRequest) {
           amount_paid: (session.amount_total || 0) / 100,
         }
 
-        console.log('Creating student package:', packageData)
+        console.log('Inserting package:', JSON.stringify(packageData, null, 2))
 
         const { data: studentPackage, error: packageError } = await supabaseAdmin
           .from('student_packages')
@@ -86,15 +106,27 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (packageError) {
-          console.error('❌ Package creation error:', packageError)
+          console.error('❌ Package creation error:', {
+            message: packageError.message,
+            details: packageError.details,
+            hint: packageError.hint,
+            code: packageError.code
+          })
           throw packageError
         }
 
-        console.log('✅ Student package created:', studentPackage.id)
-        return NextResponse.json({ received: true, success: true, type: 'class_package' })
+        console.log('✅ Student package created successfully:', studentPackage.id)
+        return NextResponse.json({ 
+          received: true, 
+          success: true, 
+          type: 'class_package',
+          package_id: studentPackage.id 
+        })
       }
       
-      // Handle EVENT PASS purchases
+      // ==========================================
+      // HANDLE EVENT PASS PURCHASES
+      // ==========================================
       else if (session.metadata?.type === 'pass_purchase') {
         console.log('🎫 Processing PASS purchase')
         
@@ -104,11 +136,14 @@ export async function POST(request: NextRequest) {
           ? parseInt(session.metadata.validity_days) 
           : null
 
+        console.log('Pass details:', { passTypeId, credits, validityDays })
+
         let expiryDate = null
         if (validityDays) {
           const expiry = new Date()
           expiry.setDate(expiry.getDate() + validityDays)
           expiryDate = expiry.toISOString()
+          console.log('Calculated expiry:', expiryDate)
         }
 
         const passData = {
@@ -123,7 +158,7 @@ export async function POST(request: NextRequest) {
           amount_paid: (session.amount_total || 0) / 100,
         }
 
-        console.log('Creating pass:', passData)
+        console.log('Inserting pass:', JSON.stringify(passData, null, 2))
 
         const { data: pass, error: passError } = await supabaseAdmin
           .from('user_passes')
@@ -132,15 +167,27 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (passError) {
-          console.error('❌ Pass creation error:', passError)
+          console.error('❌ Pass creation error:', {
+            message: passError.message,
+            details: passError.details,
+            hint: passError.hint,
+            code: passError.code
+          })
           throw passError
         }
 
-        console.log('✅ Pass created:', pass.id)
-        return NextResponse.json({ received: true, success: true, type: 'pass' })
+        console.log('✅ Pass created successfully:', pass.id)
+        return NextResponse.json({ 
+          received: true, 
+          success: true, 
+          type: 'pass',
+          pass_id: pass.id 
+        })
       } 
       
-      // Handle regular TICKET purchases
+      // ==========================================
+      // HANDLE REGULAR TICKET PURCHASES
+      // ==========================================
       else {
         console.log('🎟️ Processing TICKET purchase')
         
@@ -151,6 +198,8 @@ export async function POST(request: NextRequest) {
         }
 
         const cartItems = JSON.parse(cartItemsString)
+        console.log('Cart items:', JSON.stringify(cartItems, null, 2))
+
         if (!Array.isArray(cartItems) || cartItems.length === 0) {
           console.error('❌ Invalid cart items')
           return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
@@ -166,7 +215,7 @@ export async function POST(request: NextRequest) {
           status: 'completed',
         }
         
-        console.log('Creating order:', orderData)
+        console.log('Creating order:', JSON.stringify(orderData, null, 2))
 
         const { data: order, error: orderError } = await supabaseAdmin
           .from('orders')
@@ -175,7 +224,12 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (orderError) {
-          console.error('❌ Order error:', orderError)
+          console.error('❌ Order error:', {
+            message: orderError.message,
+            details: orderError.details,
+            hint: orderError.hint,
+            code: orderError.code
+          })
           throw orderError
         }
 
@@ -192,41 +246,69 @@ export async function POST(request: NextRequest) {
           event_date: item.eventDate || new Date().toISOString(),
         }))
 
+        console.log('Creating order items:', JSON.stringify(orderItems, null, 2))
+
         const { error: itemsError } = await supabaseAdmin
           .from('order_items')
           .insert(orderItems)
 
         if (itemsError) {
-          console.error('❌ Items error:', itemsError)
+          console.error('❌ Items error:', {
+            message: itemsError.message,
+            details: itemsError.details,
+            hint: itemsError.hint,
+            code: itemsError.code
+          })
           throw itemsError
         }
 
         console.log('✅ Items created:', orderItems.length)
 
+        // Update ticket quantities
         for (const item of cartItems) {
           try {
-            await supabaseAdmin.rpc('increment_ticket_sold', {
+            console.log('Updating ticket quantity for:', item.ticketId)
+            const { error: rpcError } = await supabaseAdmin.rpc('increment_ticket_sold', {
               ticket_id: item.ticketId,
               quantity: item.quantity || 1,
             })
-          } catch (e) {
-            console.error('⚠️ Ticket update failed:', e)
+            if (rpcError) {
+              console.error('⚠️ Ticket update failed:', rpcError)
+            } else {
+              console.log('✅ Ticket quantity updated')
+            }
+          } catch (e: any) {
+            console.error('⚠️ Ticket update exception:', e.message)
           }
         }
 
         console.log('✅ Ticket purchase complete')
-        return NextResponse.json({ received: true, success: true, type: 'ticket' })
+        return NextResponse.json({ 
+          received: true, 
+          success: true, 
+          type: 'ticket',
+          order_id: order.id 
+        })
       }
 
     } catch (error: any) {
-      console.error('❌ Processing failed:', error)
+      console.error('❌ Processing failed:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        stack: error.stack
+      })
       return NextResponse.json({ 
         error: 'Processing failed',
-        details: error.message,
-        hint: error.hint 
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
       }, { status: 500 })
     }
   }
 
+  console.log('ℹ️ Event type not handled:', event.type)
   return NextResponse.json({ received: true })
 }
