@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { supabaseAdmin } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+
+// Create admin client directly in webhook
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function POST(request: NextRequest) {
   console.log('🔔 Webhook received')
@@ -36,9 +48,8 @@ export async function POST(request: NextRequest) {
       console.log('💰 Amount:', session.amount_total)
       console.log('👤 User ID:', session.client_reference_id)
 
-      // Get cart items from metadata
       const cartItemsString = session.metadata?.cartItems
-      console.log('🛒 Cart items string:', cartItemsString)
+      console.log('🛒 Cart metadata:', cartItemsString)
 
       if (!cartItemsString) {
         console.error('❌ No cart items in metadata')
@@ -46,15 +57,14 @@ export async function POST(request: NextRequest) {
       }
 
       const cartItems = JSON.parse(cartItemsString)
-      console.log('📋 Parsed cart items:', cartItems)
+      console.log('📋 Cart items:', cartItems)
 
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        console.error('❌ Cart items is not an array or is empty')
+        console.error('❌ Invalid cart items')
         return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
       }
 
       // Create order
-      console.log('Creating order...')
       const orderData = {
         user_id: session.client_reference_id || null,
         stripe_session_id: session.id,
@@ -63,7 +73,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
       }
       
-      console.log('Order data:', orderData)
+      console.log('Creating order:', orderData)
 
       const { data: order, error: orderError } = await supabaseAdmin
         .from('orders')
@@ -72,29 +82,26 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (orderError) {
-        console.error('❌ Order creation error:', orderError)
+        console.error('❌ Order error:', orderError)
         throw orderError
       }
 
       console.log('✅ Order created:', order.id)
 
       // Create order items
-      const orderItems = cartItems.map((item: any) => {
-        const orderItem = {
-          order_id: order.id,
-          event_id: item.eventId,
-          ticket_type_id: item.ticketId,
-          quantity: item.quantity || 1,
-          price_per_ticket: item.price || 0,
-          ticket_name: item.ticketName || 'General Admission',
-          event_title: item.eventTitle || 'Event',
-          event_date: item.eventDate || new Date().toISOString(),
-        }
-        console.log('Order item:', orderItem)
-        return orderItem
-      })
+      const orderItems = cartItems.map((item: any) => ({
+        order_id: order.id,
+        event_id: item.eventId,
+        ticket_type_id: item.ticketId,
+        quantity: item.quantity || 1,
+        price_per_ticket: item.price || 0,
+        ticket_name: item.ticketName || 'General Admission',
+        event_title: item.eventTitle || 'Event',
+        event_date: item.eventDate || new Date().toISOString(),
+      }))
 
-      console.log('Creating order items...')
+      console.log('Creating order items:', orderItems)
+
       const { error: itemsError } = await supabaseAdmin
         .from('order_items')
         .insert(orderItems)
@@ -104,38 +111,31 @@ export async function POST(request: NextRequest) {
         throw itemsError
       }
 
-      console.log('✅ Order items created:', orderItems.length)
+      console.log('✅ Order items created')
 
       // Update ticket quantities
-      console.log('Updating ticket quantities...')
       for (const item of cartItems) {
         try {
-          const { error: updateError } = await supabaseAdmin.rpc(
+          const { error } = await supabaseAdmin.rpc(
             'increment_ticket_sold',
             {
               ticket_id: item.ticketId,
               quantity: item.quantity || 1,
             }
           )
-          if (updateError) {
-            console.error('⚠️ Ticket update warning:', updateError)
+          if (error) {
+            console.error('⚠️ Ticket update warning:', error)
           }
         } catch (e) {
           console.error('⚠️ Failed to update ticket:', e)
         }
       }
 
-      console.log('✅ Webhook processing complete')
-      return NextResponse.json({ received: true, success: true })
+      console.log('✅ Webhook complete')
+      return NextResponse.json({ received: true })
 
     } catch (error: any) {
-      console.error('❌ Webhook processing error:', error)
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      })
+      console.error('❌ Processing error:', error)
       return NextResponse.json({ 
         error: 'Processing failed',
         details: error.message 
