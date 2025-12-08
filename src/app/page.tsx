@@ -10,7 +10,7 @@ import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/lib/auth-context'
 import { Loader2, LogOut, User, Ticket } from 'lucide-react'
 import Link from 'next/link'
-import { Loader2, LogOut, User, Ticket } from 'lucide-react'
+
 
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
