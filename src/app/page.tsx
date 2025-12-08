@@ -8,7 +8,7 @@ import CartButton from '@/components/CartButton'
 import CartSidebar from '@/components/CartSidebar'
 import AuthModal from '@/components/AuthModal'
 import { useAuth } from '@/lib/auth-context'
-import { Loader2, LogOut, User, Ticket } from 'lucide-react'
+import { Loader2, LogOut, User, Ticket, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 
@@ -105,24 +105,23 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Mikilele Events
-              </h1>
-              <p className="text-gray-600 mt-1">
+      <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-indigo-600">Mikilele Events</h1>
+              <p className="text-sm text-gray-600 hidden md:block">
                 Discover amazing events and experiences
               </p>
-            </div>
+            </Link>
+
             <div className="flex gap-4 items-center">
               <Link
-                href="/my-passes"
-                className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                href="/classes"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors"
               >
-                <Ticket className="w-4 h-4" />
-                My Passes
+                <span className="text-xl">💃</span>
+                Classes
               </Link>
               <Link
                 href="/passes"
@@ -136,6 +135,20 @@ export default function HomePage() {
               {user ? (
                 <div className="flex items-center gap-3">
                   <Link
+                    href="/classes/my-classes"
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    My Classes
+                  </Link>
+                  <Link
+                    href="/my-passes"
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    My Passes
+                  </Link>
+                  <Link
                     href="/my-tickets"
                     className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
                   >
@@ -144,12 +157,12 @@ export default function HomePage() {
                   </Link>
                   <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                     <User className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm font-medium text-gray-900">
                       {user.email?.split('@')[0]}
                     </span>
                   </div>
                   <button
-                    onClick={() => signOut()}
+                    onClick={signOut}
                     className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 font-medium transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
@@ -157,13 +170,10 @@ export default function HomePage() {
                   </button>
                 </div>
               ) : (
-                <>
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={() => {
-                      setAuthView('signin')
-                      setAuthModalOpen(true)
-                    }}
-                    className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+                    onClick={() => setAuthModalOpen(true)}
+                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors"
                   >
                     Sign In
                   </button>
@@ -172,11 +182,11 @@ export default function HomePage() {
                       setAuthView('signup')
                       setAuthModalOpen(true)
                     }}
-                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
                   >
                     Get Started
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>

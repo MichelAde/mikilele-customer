@@ -46,11 +46,11 @@ export async function POST(request: NextRequest) {
       console.log('📦 Processing session:', session.id)
       console.log('📋 Metadata:', session.metadata)
 
-      // CHECK TYPE FIRST - BEFORE LOOKING FOR CART ITEMS
-      if (session.metadata?.type === 'pass_purchase') {
-        console.log('🎫 Processing PASS purchase')
+      // Handle CLASS PACKAGE purchases
+      if (session.metadata?.type === 'class_package_purchase') {
+        console.log('💃 Processing CLASS PACKAGE purchase')
         
-        const passTypeId = session.metadata.pass_type_id
+        const packageId = session.metadata.package_id
         const credits = parseInt(session.metadata.credits)
         const validityDays = session.metadata.validity_days !== 'null' 
           ? parseInt(session.metadata.validity_days) 
@@ -64,7 +64,53 @@ export async function POST(request: NextRequest) {
           expiryDate = expiry.toISOString()
         }
 
-        // Create user pass
+        // Create student package
+        const packageData = {
+          user_id: session.client_reference_id,
+          package_id: packageId,
+          credits_remaining: credits,
+          credits_total: credits,
+          purchase_date: new Date().toISOString(),
+          expiry_date: expiryDate,
+          status: 'active',
+          stripe_session_id: session.id,
+          amount_paid: (session.amount_total || 0) / 100,
+        }
+
+        console.log('Creating student package:', packageData)
+
+        const { data: studentPackage, error: packageError } = await supabaseAdmin
+          .from('student_packages')
+          .insert(packageData)
+          .select()
+          .single()
+
+        if (packageError) {
+          console.error('❌ Package creation error:', packageError)
+          throw packageError
+        }
+
+        console.log('✅ Student package created:', studentPackage.id)
+        return NextResponse.json({ received: true, success: true, type: 'class_package' })
+      }
+      
+      // Handle EVENT PASS purchases
+      else if (session.metadata?.type === 'pass_purchase') {
+        console.log('🎫 Processing PASS purchase')
+        
+        const passTypeId = session.metadata.pass_type_id
+        const credits = parseInt(session.metadata.credits)
+        const validityDays = session.metadata.validity_days !== 'null' 
+          ? parseInt(session.metadata.validity_days) 
+          : null
+
+        let expiryDate = null
+        if (validityDays) {
+          const expiry = new Date()
+          expiry.setDate(expiry.getDate() + validityDays)
+          expiryDate = expiry.toISOString()
+        }
+
         const passData = {
           user_id: session.client_reference_id,
           pass_type_id: passTypeId,
@@ -94,7 +140,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, success: true, type: 'pass' })
       } 
       
-      // Handle regular ticket purchases
+      // Handle regular TICKET purchases
       else {
         console.log('🎟️ Processing TICKET purchase')
         
@@ -110,7 +156,6 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Invalid cart items' }, { status: 400 })
         }
 
-        // Create order with buyer info
         const orderData = {
           user_id: session.client_reference_id || null,
           stripe_session_id: session.id,
@@ -136,7 +181,6 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ Order created:', order.id)
 
-        // Create order items
         const orderItems = cartItems.map((item: any) => ({
           order_id: order.id,
           event_id: item.eventId,
@@ -159,7 +203,6 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ Items created:', orderItems.length)
 
-        // Update ticket quantities
         for (const item of cartItems) {
           try {
             await supabaseAdmin.rpc('increment_ticket_sold', {
