@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { sendEmail } from '@/lib/resend'
+import OrderConfirmationEmail from '@/emails/OrderConfirmation'
+import PassConfirmationEmail from '@/emails/PassConfirmation'
+import ClassPackageConfirmationEmail from '@/emails/ClassPackageConfirmation'
 
 // Create admin client with service role
 const supabaseAdmin = createClient(
@@ -112,7 +116,34 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ Student package created successfully:', studentPackage.id)
-        return NextResponse.json({ 
+
+        // SEND EMAIL CONFIRMATION
+        if (session.customer_details?.email) {
+          console.log('📧 Sending class package confirmation email to:', session.customer_details.email)
+          
+          // Get package details
+          const { data: packageDetails } = await supabaseAdmin
+            .from('class_packages')
+            .select('name')
+            .eq('id', packageId)
+            .single()
+          
+          await sendEmail({
+            to: session.customer_details.email,
+            subject: `Your ${packageDetails?.name || 'Class Package'} is Ready! 💃`,
+            react: ClassPackageConfirmationEmail({
+              customerName: session.customer_details.name || 'Valued Customer',
+              packageName: packageDetails?.name || 'Class Package',
+              creditsTotal: credits,
+              expiryDate: expiryDate,
+              packageUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/classes/my-classes`,
+            }),
+          })
+          
+          console.log('✅ Class package confirmation email sent')
+        }
+        
+        return NextResponse.json({
           received: true, 
           success: true, 
           type: 'class_package',
@@ -173,7 +204,34 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ Pass created successfully:', pass.id)
-        return NextResponse.json({ 
+
+        // SEND EMAIL CONFIRMATION
+        if (session.customer_details?.email) {
+          console.log('📧 Sending pass confirmation email to:', session.customer_details.email)
+          
+          // Get pass type details
+          const { data: passType } = await supabaseAdmin
+            .from('pass_types')
+            .select('name')
+            .eq('id', passTypeId)
+            .single()
+          
+          await sendEmail({
+            to: session.customer_details.email,
+            subject: `Your ${passType?.name || 'Event Pass'} is Activated! 🎟️`,
+            react: PassConfirmationEmail({
+              customerName: session.customer_details.name || 'Valued Customer',
+              passName: passType?.name || 'Event Pass',
+              creditsTotal: credits,
+              expiryDate: expiryDate,
+              passUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/my-passes`,
+            }),
+          })
+          
+          console.log('✅ Pass confirmation email sent')
+        }
+        
+        return NextResponse.json({
           received: true, 
           success: true, 
           type: 'pass',
@@ -305,7 +363,33 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ Ticket purchase complete')
-        return NextResponse.json({ 
+
+        // SEND EMAIL CONFIRMATION
+        if (session.customer_details?.email) {
+          console.log('📧 Sending order confirmation email to:', session.customer_details.email)
+          
+          await sendEmail({
+            to: session.customer_details.email,
+            subject: `Order Confirmation - Mikilele Events 🎉`,
+            react: OrderConfirmationEmail({
+              customerName: session.customer_details.name || 'Valued Customer',
+              orderNumber: order.id.substring(0, 8).toUpperCase(),
+              orderItems: cartItems.map((item: any) => ({
+                eventTitle: item.eventTitle,
+                eventDate: item.eventDate,
+                ticketName: item.ticketName,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+              total: (session.amount_total || 0) / 100,
+              orderUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/my-tickets`,
+            }),
+          })
+          
+          console.log('✅ Order confirmation email sent')
+        }
+        
+        return NextResponse.json({
           received: true, 
           success: true, 
           type: 'ticket',
