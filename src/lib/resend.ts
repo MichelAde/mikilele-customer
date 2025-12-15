@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { render } from '@react-email/render'
 
 if (!process.env.RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY is not set')
@@ -20,11 +21,14 @@ export async function sendEmail({
   react: React.ReactElement
 }) {
   try {
+    // Render React component to HTML (await the promise)
+    const html = await render(react)
+
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
-      react,
+      html, // Send HTML instead of React component
     })
 
     if (error) {
