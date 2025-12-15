@@ -62,13 +62,14 @@ export async function GET(request: NextRequest) {
     for (const event of events) {
       console.log(`Processing event: ${event.title}`)
 
-      // Get all order items for this event
+      // Get all order items for this event with their orders
       const { data: orderItems, error: itemsError } = await supabaseAdmin
         .from('order_items')
         .select(`
           quantity,
           ticket_name,
-          orders (
+          order_id,
+          orders!inner (
             id,
             buyer_email,
             buyer_name
@@ -90,7 +91,9 @@ export async function GET(request: NextRequest) {
       const ordersByEmail = new Map<string, any>()
       
       for (const item of orderItems) {
-        const order = item.orders
+        // Type assertion to handle the join result
+        const order = (item as any).orders as { id: string; buyer_email: string; buyer_name: string | null }
+        
         if (!order || !order.buyer_email) continue
 
         if (!ordersByEmail.has(order.buyer_email)) {
@@ -101,7 +104,7 @@ export async function GET(request: NextRequest) {
           })
         }
 
-        const customer = ordersByEmail.get(order.buyer_email)
+        const customer = ordersByEmail.get(order.buyer_email)!
         customer.ticketCount += item.quantity
       }
 
