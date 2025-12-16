@@ -172,13 +172,6 @@ export default function HomePage() {
                         Admin
                       </Link>
                   
-                  {/* NEW SOCIAL MEDIA LINKS */}
-                  <Link href="/admin/social/create" className="hover:text-purple-300">
-                    📱 Social Media
-                  </Link>
-                  <Link href="/admin/social/calendar" className="hover:text-purple-300">
-                    📅 Calendar
-                  </Link>
                   <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                     <User className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-medium text-gray-900">
