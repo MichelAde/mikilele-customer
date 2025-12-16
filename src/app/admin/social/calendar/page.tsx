@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -22,13 +22,12 @@ export default function SocialCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const router = useRouter()
 
-  useEffect(() => {
-    checkUser()
-    fetchPosts()
-  }, [currentDate])
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -203,24 +202,24 @@ export default function SocialCalendar() {
                         {date.getDate()}
                       </div>
                       <div className="space-y-1">
-                        {dayPosts.map(post => (
-                          <div
+                        {dayPosts.map((post) => (
+                            <div
                             key={post.id}
                             className={`${platformColors[post.platform]} text-white text-xs p-2 rounded cursor-pointer hover:opacity-90`}
                             title={`${post.events.title} - ${post.content.substring(0, 100)}...`}
-                          >
+                            >
                             <div className="font-semibold truncate">
-                              {post.platform.charAt(0).toUpperCase()}
+                                {post.platform.charAt(0).toUpperCase()}
                             </div>
                             <div className="truncate opacity-90">
-                              {new Date(post.scheduled_at).toLocaleTimeString('en-US', {
+                                {new Date(post.scheduled_at).toLocaleTimeString('en-US', {
                                 hour: 'numeric',
                                 minute: '2-digit',
-                              })}
+                                })}
                             </div>
-                          </div>
+                            </div>
                         ))}
-                      </div>
+                        </div>
                     </>
                   )}
                 </div>

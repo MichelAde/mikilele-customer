@@ -3,17 +3,22 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
+
+interface PlatformGuides {
+  [key: string]: string
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { eventId, platform } = await request.json()
+    const body = await request.json()
+    const { eventId, platform } = body
 
     if (!eventId || !platform) {
       return NextResponse.json(
@@ -22,7 +27,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get event details
+    console.log('Generating post for event:', eventId, 'platform:', platform)
+
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('*')
@@ -30,65 +36,84 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (eventError || !event) {
+      console.error('Event fetch error:', eventError)
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       )
     }
 
-    // Platform-specific instructions
-    const platformGuides: Record<string, string> = {
+    console.log('Event found:', event.title)
+
+    const platformGuides: PlatformGuides = {
       facebook: `
         - Conversational and engaging tone
         - 2-3 paragraphs
         - Include event details clearly
-        - Add relevant emojis
+        - Add relevant emojis (but not too many)
         - Use 2-3 hashtags
         - Include clear call-to-action
         - Character limit: ~500 characters
+        - Focus on community and excitement
       `,
       instagram: `
         - Visual and punchy
-        - Short sentences
+        - Short sentences with line breaks
         - Heavy use of emojis (but tasteful)
-        - 8-12 hashtags at the end
-        - Line breaks for readability
+        - 8-12 hashtags at the end (on separate lines)
         - Focus on excitement and FOMO
-        - Character limit: ~300 characters for caption
+        - Caption limit: ~300 characters before hashtags
+        - Use relevant dance/event hashtags
       `,
       twitter: `
         - Concise and punchy
-        - 1-2 sentences
-        - Key details only
+        - 1-2 sentences maximum
+        - Key details only (what, when, where)
         - 2-3 hashtags
-        - Call-to-action
-        - Must be under 280 characters
+        - Strong call-to-action
+        - MUST be under 280 characters total
       `,
       linkedin: `
         - Professional tone
         - 2-3 paragraphs
-        - Focus on value and networking
-        - Minimal emojis
+        - Focus on value, networking, and professional development
+        - Minimal emojis (1-2 max)
         - 2-3 professional hashtags
         - Character limit: ~500 characters
+        - Emphasize learning and community building
       `,
     }
 
-    const prompt = `You are a social media expert creating a ${platform} post for an event.
+    const eventDate = new Date(event.date)
+    const formattedDate = eventDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+
+    const prompt = `You are a social media expert creating a ${platform} post for a dance/music event.
 
 Event Details:
 - Title: ${event.title}
-- Type: ${event.event_type || 'Social Event'}
-- Date: ${new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+- Type: ${event.event_type || 'Dance Social Event'}
+- Date: ${formattedDate}
 - Time: ${event.start_time || '8:00 PM'}
 - Location: ${event.location || 'TBA'}
 - Description: ${event.description || 'Join us for an amazing event!'}
-- Price: ${event.price ? `$${event.price} CAD` : 'Free'}
+- Price: ${event.price ? `$${event.price} CAD` : 'See ticket options'}
 
 Platform Guidelines for ${platform}:
 ${platformGuides[platform]}
 
-Generate 3 different post variations, each optimized for ${platform}. Make them engaging, on-brand for a dance/music events company called "Mikilele Events", and include appropriate calls-to-action.
+Brand Voice:
+- Company: Mikilele Events
+- Personality: Vibrant, welcoming, community-focused
+- Focus: Dance, music, connection, fun
+
+Generate 3 different post variations, each optimized for ${platform}. 
+Make them engaging, authentic, and include appropriate calls-to-action.
+Each variation should have a different style or angle.
 
 Format your response as a JSON array of 3 posts:
 [
@@ -97,7 +122,14 @@ Format your response as a JSON array of 3 posts:
   {"variation": 3, "content": "post text here"}
 ]
 
-Only return the JSON array, no other text.`
+IMPORTANT: 
+- Only return the JSON array, no markdown code blocks or other text
+- Make sure the JSON is valid
+- Respect character limits for ${platform}
+- Include emojis naturally within the text
+- For Instagram, put hashtags on separate lines at the end`
+
+    console.log('Calling Claude API...')
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -110,25 +142,36 @@ Only return the JSON array, no other text.`
       ],
     })
 
-    // Extract the text content
+    console.log('Claude API response received')
+
     const textContent = message.content.find(block => block.type === 'text')
     if (!textContent || textContent.type !== 'text') {
+      console.error('No text response from Claude')
       throw new Error('No text response from Claude')
     }
 
-    // Parse JSON response
+    console.log('Raw AI response:', textContent.text)
+
     let posts
     try {
-      // Remove markdown code blocks if present
       const cleanedResponse = textContent.text
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim()
       
+      console.log('Cleaned response:', cleanedResponse)
+      
       posts = JSON.parse(cleanedResponse)
-    } catch (parseError) {
+      
+      if (!Array.isArray(posts) || posts.length === 0) {
+        throw new Error('Invalid posts array')
+      }
+      
+      console.log('Successfully parsed', posts.length, 'posts')
+    } catch (parseError: any) {
       console.error('Failed to parse AI response:', textContent.text)
-      throw new Error('Invalid response format from AI')
+      console.error('Parse error:', parseError.message)
+      throw new Error('Invalid response format from AI: ' + parseError.message)
     }
 
     return NextResponse.json({
@@ -143,7 +186,10 @@ Only return the JSON array, no other text.`
   } catch (error: any) {
     console.error('Generate social post error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to generate post' },
+      { 
+        error: error.message || 'Failed to generate post',
+        details: error.stack,
+      },
       { status: 500 }
     )
   }
