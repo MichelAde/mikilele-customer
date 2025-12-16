@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/resend'
 import AbandonedCartEmail from '@/emails/AbandonedCart'

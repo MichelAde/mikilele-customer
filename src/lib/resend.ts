@@ -1,19 +1,11 @@
 import { Resend } from 'resend'
 import { render } from '@react-email/render'
 
-const getResendClient = () => {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not set')
-  }
-  return new Resend(process.env.RESEND_API_KEY)
-}
+// Don't check API key at build time - only at runtime
+export const resend = new Resend(process.env.RESEND_API_KEY || '')
 
-export const resend = getResendClient()
+export const FROM_EMAIL = 'Mikilele Events <onboarding@resend.dev>'
 
-// Email sender configuration
-export const FROM_EMAIL = 'Mikilele Events <onboarding@resend.dev>' // Change to your domain when ready
-
-// Email sending helper with error handling
 export async function sendEmail({
   to,
   subject,
@@ -24,14 +16,19 @@ export async function sendEmail({
   react: React.ReactElement
 }) {
   try {
-    // Render React component to HTML (await the promise)
+    // Check API key at runtime, not build time
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY is not set')
+      return { success: false, error: 'Email service not configured' }
+    }
+
     const html = await render(react)
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
-      html, // Send HTML instead of React component
+      html,
     })
 
     if (error) {
@@ -39,7 +36,7 @@ export async function sendEmail({
       return { success: false, error }
     }
 
-    console.log('Email sent successfully:', data)
+    console.log('✅ Email sent successfully:', data)
     return { success: true, data }
   } catch (error) {
     console.error('Email send exception:', error)
