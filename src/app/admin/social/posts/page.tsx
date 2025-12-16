@@ -38,8 +38,12 @@ export default function SocialPostsLibrary() {
 
   async function checkUser() {
     const result = await supabase.auth.getUser()
+    console.log('Auth check:', result.data.user ? 'Logged in' : 'Not logged in')
     if (!result.data.user) {
-      router.push('/')
+      console.log('Redirecting to login...')
+      router.push('/login')  // Changed from '/' to '/login'
+    } else {
+      console.log('User authenticated:', result.data.user.email)
     }
   }
 

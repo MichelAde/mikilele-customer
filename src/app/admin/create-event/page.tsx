@@ -74,7 +74,6 @@ export default function CreateEventPage() {
       const { error } = await supabase.from('events').insert({
         ...formData,
         slug,
-        organizer_id: user?.id,
         status: 'published',
       })
 

@@ -1,45 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+})
+
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    { error: 'Method not allowed. Use POST instead.' },
+    { status: 405 }
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, category, venue, city } = await request.json()
+    const body = await request.json()
+    const { title, category, date, time, location } = body
 
-    const prompt = `Write an engaging event description for a ${category.replace('_', ' ')} called "${title}" at ${venue} in ${city}. 
+    if (!title) {
+      return NextResponse.json(
+        { error: 'Event title is required' },
+        { status: 400 }
+      )
+    }
 
-Make it exciting, professional, and include:
-- What attendees can expect
-- Why they should attend
-- The atmosphere and vibe
-- Keep it to 2-3 paragraphs
-- Write in second person (you will experience...)
+    console.log('Generating description for:', { title, category, date, time, location })
 
-Do not use markdown formatting. Just plain text paragraphs.`
+    const prompt = `You are a professional event marketing copywriter. Create an engaging, compelling event description for the following event:
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 500,
-        messages: [{
+Event Details:
+- Title: ${title}
+- Category: ${category || 'Not specified'}
+- Date: ${date || 'TBD'}
+- Time: ${time || 'TBD'}
+- Location: ${location || 'TBD'}
+
+Write a 2-3 paragraph description that:
+1. Captures the excitement and value of the event
+2. Clearly explains what attendees will experience
+3. Creates urgency and encourages registration
+4. Is professional yet engaging
+5. Is between 150-250 words
+
+Return ONLY the description text, no titles or extra formatting.`
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [
+        {
           role: 'user',
-          content: prompt
-        }]
-      })
+          content: prompt,
+        },
+      ],
     })
 
-    const data = await response.json()
-    const description = data.content[0].text
+    const textContent = message.content.find(block => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text response from Claude')
+    }
 
-    return NextResponse.json({ description })
+    const description = textContent.text.trim()
+
+    console.log('Generated description:', description.substring(0, 100) + '...')
+
+    return NextResponse.json({
+      success: true,
+      description,
+    })
   } catch (error: any) {
-    console.error('AI generation error:', error)
+    console.error('Generate description error:', error)
     return NextResponse.json(
-      { error: error.message },
+      {
+        error: error.message || 'Failed to generate description',
+        details: error.stack,
+      },
       { status: 500 }
     )
   }
