@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import { Calendar, Clock, MapPin, Wand2, Copy, Check, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { Calendar, Clock, MapPin, Wand2, Copy, Check, Loader2, ArrowLeft } from 'lucide-react'
+import { getImageUrl } from '@/lib/utils'
 
 interface Event {
   id: string
   title: string
   start_datetime: string
   venue_name: string
-  image_url?: string
+  cover_image_url?: string
 }
 
 interface GeneratedPost {
@@ -47,19 +49,15 @@ export default function CreateSocialPost() {
     if (selectedEventId) {
       const event = events.find(e => e.id === selectedEventId)
       setSelectedEvent(event || null)
-      setImageUrl(event?.image_url || '')
+      // Convert Google Drive URL if needed
+      setImageUrl(getImageUrl(event?.cover_image_url))
     }
   }, [selectedEventId, events])
 
   async function checkUser() {
     const result = await supabase.auth.getUser()
     console.log('User check:', result.data.user ? 'Authenticated' : 'Not authenticated')
-    // Temporarily disabled to fix redirect issue
-    // if (!result.data.user) {
-    //   console.log('No user, redirecting to homepage')
-    //   window.location.href = '/'
-    //   return
-    // }
+    
     if (result.data.user) {
       console.log('User authenticated:', result.data.user.email)
     }
@@ -84,12 +82,7 @@ export default function CreateSocialPost() {
 
       if (result.data) {
         console.log('Found events:', result.data.length)
-        // Map cover_image_url to image_url for compatibility
-        const eventsWithImageUrl = result.data.map(event => ({
-          ...event,
-          image_url: event.cover_image_url || ''
-        }))
-        setEvents(eventsWithImageUrl as Event[])
+        setEvents(result.data as Event[])
       }
     } catch (error) {
       console.error('Events fetch exception:', error)
@@ -177,7 +170,6 @@ export default function CreateSocialPost() {
     }
   }
 
-  // Helper function to format date and time from start_datetime
   function formatEventDateTime(start_datetime: string) {
     const date = new Date(start_datetime)
     return {
@@ -212,6 +204,17 @@ export default function CreateSocialPost() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Create Social Media Post</h1>
           <p className="text-gray-600">Schedule posts for your events across social platforms</p>
@@ -238,6 +241,20 @@ export default function CreateSocialPost() {
 
               {selectedEvent && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  {/* Event Image Preview */}
+                  {imageUrl && (
+                    <div className="mb-3">
+                      <img
+                        src={imageUrl}
+                        alt={selectedEvent.title}
+                        className="w-full h-40 object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+                  
                   <h3 className="font-semibold mb-2">{selectedEvent.title}</h3>
                   <div className="space-y-1 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
@@ -320,14 +337,17 @@ export default function CreateSocialPost() {
 
             {/* Image URL */}
             <div className="bg-white rounded-lg shadow p-6">
-              <label className="block text-sm font-medium mb-2">Image URL (optional)</label>
+              <label className="block text-sm font-medium mb-2">Image URL</label>
               <input
                 type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... (automatically populated from event)"
                 className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500"
               />
+              <p className="mt-2 text-xs text-gray-500">
+                Google Drive links are automatically converted to direct image URLs
+              </p>
             </div>
 
             {/* Schedule Time */}
