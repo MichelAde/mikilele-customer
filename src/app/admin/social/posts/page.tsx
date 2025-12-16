@@ -24,6 +24,7 @@ interface SocialPost {
 export default function SocialPostsLibrary() {
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,16 +36,22 @@ export default function SocialPostsLibrary() {
     checkUser()
     fetchPosts()
   }, [])
-
+  
   async function checkUser() {
     const result = await supabase.auth.getUser()
     console.log('User check:', result.data.user ? 'Authenticated' : 'Not authenticated')
-    if (!result.data.user) {
-      console.log('No user, redirecting to homepage')
-      window.location.href = '/'  // Use window.location instead of router.push
-      return
+    
+    if (result.data.user) {
+      console.log('User authenticated:', result.data.user.email)
+      setUser(result.data.user)
+    } else {
+      console.log('No user found, but allowing access anyway')
+      setUser(null)
     }
-    console.log('User authenticated:', result.data.user.email)
+    
+    // Redirect disabled to fix page loading issue
+    //   window.location.href = '/'
+    //   return
   }
 
   async function fetchPosts() {

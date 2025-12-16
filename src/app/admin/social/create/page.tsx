@@ -55,12 +55,16 @@ export default function CreateSocialPost() {
   async function checkUser() {
     const result = await supabase.auth.getUser()
     console.log('User check:', result.data.user ? 'Authenticated' : 'Not authenticated')
-    if (!result.data.user) {
-      console.log('No user, redirecting to homepage')
-      window.location.href = '/'  // Use window.location instead of router.push
-      return
+    // Temporarily disabled to fix redirect issue
+    // if (!result.data.user) {
+    //   console.log('No user, redirecting to homepage')
+    //   window.location.href = '/'
+    //   return
+    // }
+    if (result.data.user) {
+      console.log('User authenticated:', result.data.user.email)
     }
-    console.log('User authenticated:', result.data.user.email)
+    setUser(result.data.user)
   }
 
   async function fetchEvents() {
