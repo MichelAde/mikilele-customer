@@ -8,10 +8,9 @@ import { Calendar, Clock, MapPin, Wand2, Copy, Check, Loader2 } from 'lucide-rea
 interface Event {
   id: string
   title: string
-  date: string
-  start_time: string
-  location: string
-  image_url: string
+  start_datetime: string
+  venue_name: string
+  image_url?: string
 }
 
 interface GeneratedPost {
@@ -68,15 +67,32 @@ export default function CreateSocialPost() {
   }
 
   async function fetchEvents() {
-    const result = await supabase
-      .from('events')
-      .select('id, title, date, start_time, location, image_url')
-      .gte('date', new Date().toISOString())
-      .order('date', { ascending: true })
-      .limit(50)
+    try {
+      const result = await supabase
+        .from('events')
+        .select('id, title, start_datetime, venue_name, cover_image_url')
+        .gte('start_datetime', new Date().toISOString())
+        .order('start_datetime', { ascending: true })
+        .limit(50)
 
-    if (!result.error && result.data) {
-      setEvents(result.data)
+      console.log('Events query result:', result)
+
+      if (result.error) {
+        console.error('Events fetch error:', result.error)
+        return
+      }
+
+      if (result.data) {
+        console.log('Found events:', result.data.length)
+        // Map cover_image_url to image_url for compatibility
+        const eventsWithImageUrl = result.data.map(event => ({
+          ...event,
+          image_url: event.cover_image_url || ''
+        }))
+        setEvents(eventsWithImageUrl as Event[])
+      }
+    } catch (error) {
+      console.error('Events fetch exception:', error)
     }
   }
 
@@ -161,6 +177,24 @@ export default function CreateSocialPost() {
     }
   }
 
+  // Helper function to format date and time from start_datetime
+  function formatEventDateTime(start_datetime: string) {
+    const date = new Date(start_datetime)
+    return {
+      date: date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }),
+    }
+  }
+
   const platformColors: Record<string, string> = {
     facebook: 'bg-blue-500',
     instagram: 'bg-pink-500',
@@ -197,7 +231,7 @@ export default function CreateSocialPost() {
                 <option value="">Choose an event...</option>
                 {events.map((event) => (
                   <option key={event.id} value={event.id}>
-                    {event.title} - {new Date(event.date).toLocaleDateString()}
+                    {event.title} - {new Date(event.start_datetime).toLocaleDateString()}
                   </option>
                 ))}
               </select>
@@ -208,20 +242,15 @@ export default function CreateSocialPost() {
                   <div className="space-y-1 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      {new Date(selectedEvent.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {formatEventDateTime(selectedEvent.start_datetime).date}
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      {selectedEvent.start_time}
+                      {formatEventDateTime(selectedEvent.start_datetime).time}
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
-                      {selectedEvent.location}
+                      {selectedEvent.venue_name}
                     </div>
                   </div>
                 </div>
