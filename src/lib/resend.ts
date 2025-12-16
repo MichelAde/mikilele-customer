@@ -1,11 +1,14 @@
 import { Resend } from 'resend'
 import { render } from '@react-email/render'
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is not set')
+const getResendClient = () => {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set')
+  }
+  return new Resend(process.env.RESEND_API_KEY)
 }
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+export const resend = getResendClient()
 
 // Email sender configuration
 export const FROM_EMAIL = 'Mikilele Events <onboarding@resend.dev>' // Change to your domain when ready
