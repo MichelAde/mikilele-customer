@@ -155,16 +155,6 @@ export default function HomePage() {
                     <Ticket className="w-4 h-4" />
                     My Tickets
                   </Link>
-                      <Link href="/my-classes" className="hover:text-purple-300">
-                        My Classes
-                      </Link>
-                      <Link href="/my-passes" className="hover:text-purple-300">
-                        My Passes
-                      </Link>
-                      <Link href="/my-tickets" className="hover:text-purple-300">
-                        My Tickets
-                      </Link>
-                      
                       {/* Admin Section */}
                       <span className="text-purple-300">|</span>
                       
