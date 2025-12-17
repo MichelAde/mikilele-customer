@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Users } from 'lucide-react'
 import { 
   Plus, 
   ArrowLeft, 
@@ -192,13 +193,22 @@ export default function CampaignsDashboard() {
             <h1 className="text-3xl font-bold mb-2">Marketing Campaigns</h1>
             <p className="text-gray-600">Create and manage automated marketing campaigns</p>
           </div>
-          <Link
-            href="/admin/campaigns/create"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Campaign
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/admin/campaigns/segments"
+              className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 flex items-center gap-2"
+            >
+              <Users className="w-5 h-5" />
+              Manage Segments
+            </Link>
+            <Link
+              href="/admin/campaigns/create"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Campaign
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
