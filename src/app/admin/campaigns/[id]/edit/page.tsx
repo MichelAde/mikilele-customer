@@ -10,11 +10,11 @@ import {
   Mail, 
   MessageSquare, 
   Phone,
-  Clock,
+  Users,
   Save,
   Play,
   Trash2,
-  GripVertical
+  Target
 } from 'lucide-react'
 
 interface Campaign {
@@ -24,6 +24,7 @@ interface Campaign {
   type: string
   status: string
   goal: string
+  actual_audience_size: number
 }
 
 interface CampaignStep {
@@ -40,6 +41,20 @@ interface CampaignStep {
   cta_url: string
 }
 
+interface Segment {
+  id: string
+  name: string
+  description: string
+  estimated_size: number
+  is_dynamic: boolean
+}
+
+interface CampaignAudience {
+  id: string
+  segment_id: string
+  segments: Segment
+}
+
 export default function EditCampaign() {
   const params = useParams()
   const campaignId = params.id as string
@@ -47,9 +62,11 @@ export default function EditCampaign() {
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [steps, setSteps] = useState<CampaignStep[]>([])
+  const [segments, setSegments] = useState<Segment[]>([])
+  const [selectedSegments, setSelectedSegments] = useState<CampaignAudience[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [showAddStep, setShowAddStep] = useState(false)
+  const [showAddSegment, setShowAddSegment] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,6 +76,8 @@ export default function EditCampaign() {
   useEffect(() => {
     fetchCampaign()
     fetchSteps()
+    fetchSegments()
+    fetchCampaignAudiences()
   }, [campaignId])
 
   async function fetchCampaign() {
@@ -91,6 +110,112 @@ export default function EditCampaign() {
       setSteps(data || [])
     } catch (error) {
       console.error('Error fetching steps:', error)
+    }
+  }
+
+  async function fetchSegments() {
+    try {
+      const { data, error } = await supabase
+        .from('audience_segments')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setSegments(data || [])
+    } catch (error) {
+      console.error('Error fetching segments:', error)
+    }
+  }
+
+  async function fetchCampaignAudiences() {
+    try {
+      const { data, error } = await supabase
+        .from('campaign_audiences')
+        .select('*, segments:segment_id(*)')
+        .eq('campaign_id', campaignId)
+
+      if (error) throw error
+      setSelectedSegments(data || [])
+    } catch (error) {
+      console.error('Error fetching campaign audiences:', error)
+    }
+  }
+
+  async function addSegmentToCampaign(segmentId: string) {
+    try {
+      // Check if already added
+      if (selectedSegments.some(sa => sa.segment_id === segmentId)) {
+        alert('This segment is already added to the campaign')
+        return
+      }
+
+      const segment = segments.find(s => s.id === segmentId)
+      
+      const { data, error } = await supabase
+        .from('campaign_audiences')
+        .insert({
+          campaign_id: campaignId,
+          segment_id: segmentId,
+          estimated_size: segment?.estimated_size || 0
+        })
+        .select('*, segments:segment_id(*)')
+        .single()
+
+      if (error) throw error
+
+      setSelectedSegments([...selectedSegments, data])
+      setShowAddSegment(false)
+      
+      // Update campaign total audience size
+      await updateCampaignAudienceSize()
+    } catch (error) {
+      console.error('Error adding segment:', error)
+      alert('Failed to add segment')
+    }
+  }
+
+  async function removeSegmentFromCampaign(audienceId: string) {
+    if (!confirm('Remove this segment from the campaign?')) return
+
+    try {
+      const { error } = await supabase
+        .from('campaign_audiences')
+        .delete()
+        .eq('id', audienceId)
+
+      if (error) throw error
+
+      setSelectedSegments(selectedSegments.filter(sa => sa.id !== audienceId))
+      
+      // Update campaign total audience size
+      await updateCampaignAudienceSize()
+    } catch (error) {
+      console.error('Error removing segment:', error)
+      alert('Failed to remove segment')
+    }
+  }
+
+  async function updateCampaignAudienceSize() {
+    try {
+      const { data, error } = await supabase
+        .from('campaign_audiences')
+        .select('estimated_size')
+        .eq('campaign_id', campaignId)
+
+      if (error) throw error
+
+      const totalSize = data.reduce((sum, item) => sum + (item.estimated_size || 0), 0)
+
+      await supabase
+        .from('campaigns')
+        .update({ actual_audience_size: totalSize })
+        .eq('id', campaignId)
+
+      if (campaign) {
+        setCampaign({ ...campaign, actual_audience_size: totalSize })
+      }
+    } catch (error) {
+      console.error('Error updating audience size:', error)
     }
   }
 
@@ -177,6 +302,11 @@ export default function EditCampaign() {
       return
     }
 
+    if (selectedSegments.length === 0) {
+      alert('Please select at least one audience segment before activating')
+      return
+    }
+
     if (!confirm('Are you sure you want to activate this campaign?')) return
 
     try {
@@ -231,6 +361,8 @@ export default function EditCampaign() {
     )
   }
 
+  const totalAudience = selectedSegments.reduce((sum, sa) => sum + (sa.segments?.estimated_size || 0), 0)
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -262,8 +394,120 @@ export default function EditCampaign() {
           </div>
         </div>
 
+        {/* Audience Section */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Target className="w-6 h-6 text-purple-600" />
+              <div>
+                <h2 className="text-xl font-semibold">Target Audience</h2>
+                <p className="text-sm text-gray-600">Select which segments to target</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-purple-600">
+                {totalAudience.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-500">Total Recipients</div>
+            </div>
+          </div>
+
+          {/* Selected Segments */}
+          {selectedSegments.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {selectedSegments.map((sa) => (
+                <div
+                  key={sa.id}
+                  className="flex items-center justify-between bg-purple-50 p-3 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <div className="font-semibold">{sa.segments?.name}</div>
+                      {sa.segments?.description && (
+                        <div className="text-sm text-gray-600">{sa.segments.description}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-bold text-purple-600">
+                        {sa.segments?.estimated_size?.toLocaleString() || '0'}
+                      </div>
+                      <div className="text-xs text-gray-500">people</div>
+                    </div>
+                    <button
+                      onClick={() => removeSegmentFromCampaign(sa.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Segment Button/Selector */}
+          {!showAddSegment ? (
+            <button
+              onClick={() => setShowAddSegment(true)}
+              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-purple-500 hover:text-purple-600 transition flex items-center justify-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Add Audience Segment
+            </button>
+          ) : (
+            <div className="border-2 border-purple-300 rounded-lg p-4">
+              <h3 className="font-semibold mb-3">Select Segment</h3>
+              <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                {segments
+                  .filter(s => !selectedSegments.some(sa => sa.segment_id === s.id))
+                  .map((segment) => (
+                    <button
+                      key={segment.id}
+                      onClick={() => addSegmentToCampaign(segment.id)}
+                      className="w-full text-left p-3 border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{segment.name}</div>
+                          {segment.description && (
+                            <div className="text-sm text-gray-600">{segment.description}</div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-purple-600">
+                            {segment.estimated_size?.toLocaleString() || '0'}
+                          </div>
+                          <div className="text-xs text-gray-500">people</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                {segments.filter(s => !selectedSegments.some(sa => sa.segment_id === s.id)).length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    No more segments available. <Link href="/admin/campaigns/segments/create" className="text-purple-600 hover:underline">Create one?</Link>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAddSegment(false)}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Campaign Steps */}
         <div className="space-y-4 mb-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-purple-600" />
+            Campaign Sequence
+          </h2>
+          
           {steps.map((step, index) => {
             const Icon = channelIcons[step.channel as keyof typeof channelIcons] || Mail
             
