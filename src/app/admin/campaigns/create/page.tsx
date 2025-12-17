@@ -100,10 +100,11 @@ export default function CreateCampaign() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
-      if (!user) {
-        alert('You must be logged in to create a campaign')
-        return
-      }
+      // Temporarily disabled auth check for development
+      // if (!user) {
+      //   alert('You must be logged in to create a campaign')
+      //   return
+      // }
 
       const { data, error } = await supabase
         .from('campaigns')
@@ -116,7 +117,7 @@ export default function CreateCampaign() {
           start_date: campaignData.start_date || null,
           end_date: campaignData.end_date || null,
           status: 'draft',
-          created_by: user.id
+          created_by: user?.id || null
         })
         .select()
         .single()
