@@ -208,6 +208,27 @@ export default function CampaignsDashboard() {
               <Plus className="w-5 h-5" />
               Create Campaign
             </Link>
+            <Link
+              href="/admin/campaigns/analytics"
+              className="bg-white border-2 border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 flex items-center gap-2"
+            >
+              <BarChart3 className="w-5 h-5" />
+              Analytics
+            </Link>
+            <Link
+              href="/admin/campaigns/segments"
+              className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 flex items-center gap-2"
+            >
+              <Users className="w-5 h-5" />
+              Manage Segments
+            </Link>
+            <Link
+              href="/admin/campaigns/create"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Campaign
+            </Link>
           </div>
         </div>
 
