@@ -1,98 +1,107 @@
+'use client'
+
 import Link from 'next/link'
-import { 
-  Calendar, 
-  FileText, 
-  PlusCircle, 
-  BarChart3, 
-  Users, 
-  Package 
-} from 'lucide-react'
+import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
-  const adminCards = [
-    {
-      title: 'Create Social Post',
-      description: 'Generate AI-powered posts for your events',
-      href: '/admin/social/create',
-      icon: PlusCircle,
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Post Library',
-      description: 'View and manage all your social media posts',
-      href: '/admin/social/posts',
-      icon: FileText,
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Content Calendar',
-      description: 'Visual calendar of your scheduled posts',
-      href: '/admin/social/calendar',
-      icon: Calendar,
-      color: 'bg-pink-500',
-    },
-    {
-      title: 'Create Event',
-      description: 'Add new events to your platform',
-      href: '/admin/create-event',
-      icon: Package,
-      color: 'bg-green-500',
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4">Admin Dashboard</h1>
-          <p className="text-gray-600 text-lg">
-            Manage your events, social media, and content
-          </p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-gray-600">Manage your events and marketing</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {adminCards.map((card) => {
-            const Icon = card.icon
-            return (
-              <Link
-                key={card.href}
-                href={card.href}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 group"
-              >
-                <div className={`${card.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-purple-600 transition-colors">
-                  {card.title}
-                </h3>
-                <p className="text-gray-600">
-                  {card.description}
-                </p>
-              </Link>
-            )
-          })}
+          {/* Create Event Card */}
+          <Link
+            href="/admin/create-event"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-4 rounded-lg">
+                <CalendarPlus className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Create Event</h2>
+                <p className="text-gray-600">Add new events</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Social Media - Create Post */}
+          <Link
+            href="/admin/social/create"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-lg">
+                <Share2 className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Create Social Post</h2>
+                <p className="text-gray-600">Schedule social media</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Posts Library */}
+          <Link
+            href="/admin/social/posts"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-green-500 to-teal-500 p-4 rounded-lg">
+                <Library className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Posts Library</h2>
+                <p className="text-gray-600">Manage scheduled posts</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Content Calendar */}
+          <Link
+            href="/admin/social/calendar"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 p-4 rounded-lg">
+                <CalendarIcon className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Content Calendar</h2>
+                <p className="text-gray-600">View posting schedule</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Marketing Campaigns - NEW! */}
+          <Link
+            href="/admin/campaigns"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-4 rounded-lg">
+                <TrendingUp className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Marketing Campaigns</h2>
+                <p className="text-gray-600">Multi-channel automation</p>
+              </div>
+            </div>
+          </Link>
         </div>
 
-        <div className="mt-12 bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-4">Quick Stats</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">12</div>
-              <div className="text-gray-600">Scheduled Posts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">8</div>
-              <div className="text-gray-600">Upcoming Events</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">142</div>
-              <div className="text-gray-600">Total Orders</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-pink-600">$2,840</div>
-              <div className="text-gray-600">Revenue</div>
-            </div>
-          </div>
+        {/* Back to Home */}
+        <div className="mt-8">
+          <Link
+            href="/"
+            className="text-purple-600 hover:text-purple-700 font-medium"
+          >
+            ← Back to Homepage
+          </Link>
         </div>
       </div>
     </div>
