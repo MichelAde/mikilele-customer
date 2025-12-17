@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Users } from 'lucide-react'
 import { 
   Plus, 
   ArrowLeft, 
@@ -17,8 +16,8 @@ import {
   Pause,
   Edit,
   Trash2,
-  Copy,
-  Eye
+  Eye,
+  Users
 } from 'lucide-react'
 
 interface Campaign {
@@ -59,6 +58,30 @@ export default function CampaignsDashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   const router = useRouter()
+
+  const typeIcons = {
+    email: Mail,
+    multi_channel: MessageSquare,
+    event_promo: Calendar,
+    seasonal: TrendingUp,
+    re_engagement: BarChart3
+  }
+
+  const statusColors = {
+    draft: 'bg-gray-200 text-gray-800',
+    active: 'bg-green-200 text-green-800',
+    paused: 'bg-yellow-200 text-yellow-800',
+    completed: 'bg-blue-200 text-blue-800',
+    archived: 'bg-gray-300 text-gray-600'
+  }
+
+  const typeLabels = {
+    email: 'Email',
+    multi_channel: 'Multi-Channel',
+    event_promo: 'Event Promo',
+    seasonal: 'Seasonal',
+    re_engagement: 'Re-engagement'
+  }
 
   useEffect(() => {
     fetchCampaigns()
@@ -136,30 +159,6 @@ export default function CampaignsDashboard() {
       console.error('Error deleting campaign:', error)
       alert('Failed to delete campaign')
     }
-  }
-
-  const typeIcons: Record<string, any> = {
-    email: Mail,
-    multi_channel: MessageSquare,
-    event_promo: Calendar,
-    seasonal: TrendingUp,
-    re_engagement: BarChart3
-  }
-
-  const statusColors: Record<string, string> = {
-    draft: 'bg-gray-200 text-gray-800',
-    active: 'bg-green-200 text-green-800',
-    paused: 'bg-yellow-200 text-yellow-800',
-    completed: 'bg-blue-200 text-blue-800',
-    archived: 'bg-gray-300 text-gray-600'
-  }
-
-  const typeLabels: Record<string, string> = {
-    email: 'Email',
-    multi_channel: 'Multi-Channel',
-    event_promo: 'Event Promo',
-    seasonal: 'Seasonal',
-    re_engagement: 'Re-engagement'
   }
 
   if (loading) {
@@ -311,7 +310,7 @@ export default function CampaignsDashboard() {
         ) : (
           <div className="space-y-4">
             {campaigns.map((campaign) => {
-              const TypeIcon = typeIcons[campaign.type] || Mail
+              const TypeIcon = typeIcons[campaign.type as keyof typeof typeIcons] || Mail
               
               return (
                 <div
@@ -327,11 +326,11 @@ export default function CampaignsDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold">{campaign.name}</h3>
-                          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${statusColors[campaign.status]}`}>
+                          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${statusColors[campaign.status as keyof typeof statusColors]}`}>
                             {campaign.status.toUpperCase()}
                           </span>
                           <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-                            {typeLabels[campaign.type]}
+                            {typeLabels[campaign.type as keyof typeof typeLabels]}
                           </span>
                         </div>
                         
