@@ -95,22 +95,36 @@ export default function CreateSegment() {
       })
 
       const { data, error } = await supabase
-        .from('audience_segments')
-        .insert({
-          name,
-          description,
-          segment_type: segmentType,
-          filters: filterObject,
-          is_dynamic: isDynamic,
-          estimated_size: 0 // Will be calculated later
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      alert('Segment created successfully!')
-      router.push('/admin/campaigns/segments')
+      .from('audience_segments')
+      .insert({
+        name,
+        description,
+        segment_type: segmentType,
+        filters: filterObject,
+        is_dynamic: isDynamic,
+        estimated_size: 0
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    // Calculate audience size immediately
+    const calcResponse = await fetch('/api/segments/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmentId: data.id })
+    })
+    
+    const calcData = await calcResponse.json()
+    
+    if (calcData.success) {
+      alert(`Segment created! Audience size: ${calcData.audienceSize.toLocaleString()} people`)
+    } else {
+      alert('Segment created but calculation failed. You can recalculate from the segments list.')
+    }
+    
+    router.push('/admin/campaigns/segments')
     } catch (error: any) {
       console.error('Error creating segment:', error)
       alert('Failed to create segment: ' + error.message)

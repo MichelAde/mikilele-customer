@@ -28,6 +28,12 @@ export default function AudienceSegments() {
   )
   const router = useRouter()
 
+  const typeColors: { [key: string]: string } = {
+    predefined: 'bg-blue-100 text-blue-800',
+    custom: 'bg-purple-100 text-purple-800',
+    dynamic: 'bg-green-100 text-green-800'
+  }
+
   useEffect(() => {
     fetchSegments()
   }, [])
@@ -67,14 +73,25 @@ export default function AudienceSegments() {
   }
 
   async function recalculateSegment(id: string) {
-    // This will be implemented when we build the calculation engine
-    alert('Segment recalculation coming soon!')
-  }
+    try {
+      const response = await fetch('/api/segments/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segmentId: id })
+      })
 
-  const typeColors = {
-    predefined: 'bg-blue-100 text-blue-800',
-    custom: 'bg-purple-100 text-purple-800',
-    dynamic: 'bg-green-100 text-green-800'
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`Segment calculated! Audience size: ${data.audienceSize.toLocaleString()}`)
+        fetchSegments() // Refresh the list
+      } else {
+        alert('Calculation failed: ' + data.error)
+      }
+    } catch (error: any) {
+      console.error('Error:', error)
+      alert('Failed to calculate segment')
+    }
   }
 
   if (loading) {
@@ -108,13 +125,22 @@ export default function AudienceSegments() {
             <h1 className="text-3xl font-bold mb-2">Audience Segments</h1>
             <p className="text-gray-600">Create and manage audience segments for targeting</p>
           </div>
-          <Link
-            href="/admin/campaigns/segments/create"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Segment
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/admin/campaigns/segments/calculate-all"
+              className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 flex items-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Calculate All
+            </Link>
+            <Link
+              href="/admin/campaigns/segments/create"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Segment
+            </Link>
+          </div>
         </div>
 
         {/* Segments List */}
@@ -146,7 +172,7 @@ export default function AudienceSegments() {
                   <div className="bg-purple-100 p-3 rounded-lg">
                     <Users className="w-6 h-6 text-purple-600" />
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-semibold ${typeColors[segment.segment_type as keyof typeof typeColors]}`}>
+                  <span className={`text-xs px-3 py-1 rounded-full font-semibold ${typeColors[segment.segment_type] || 'bg-gray-100 text-gray-800'}`}>
                     {segment.segment_type.toUpperCase()}
                   </span>
                 </div>
