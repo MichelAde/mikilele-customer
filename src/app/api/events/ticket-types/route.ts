@@ -69,15 +69,15 @@ export async function POST(request: NextRequest) {
       .insert({
         event_id,
         name,
-        description,
+        description: description || null,
         price: parseFloat(price),
         quantity_available: parseInt(quantity_available),
         quantity_sold: quantity_sold || 0,
-        sale_start_date,
-        sale_end_date,
+        sale_start_date: sale_start_date || null,  // Convert empty string to null
+        sale_end_date: sale_end_date || null,      // Convert empty string to null
         is_active: is_active !== false,
-        max_per_order: max_per_order || null,
-        min_per_order: min_per_order || null
+        max_per_order: max_per_order ? parseInt(max_per_order) : null,
+        min_per_order: min_per_order ? parseInt(min_per_order) : null
       })
       .select()
       .single()

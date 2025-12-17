@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { DollarSign } from 'lucide-react'
 import { Ticket } from 'lucide-react'
+import { CreditCard } from 'lucide-react'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -104,6 +105,21 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-xl font-semibold mb-1">Sales Dashboard</h2>
                 <p className="text-gray-600">Track revenue & sales</p>
+              </div>
+            </div>
+          </Link>
+          {/* Pass Management - NEW! */}
+          <Link
+            href="/admin/passes/manage"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-500 p-4 rounded-lg">
+                <CreditCard className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Pass Management</h2>
+                <p className="text-gray-600">Manage multi-event passes</p>
               </div>
             </div>
           </Link>
