@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { DollarSign } from 'lucide-react'
+import { Ticket } from 'lucide-react'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -29,7 +30,21 @@ export default function AdminDashboard() {
               </div>
             </div>
           </Link>
-
+          {/* Ticket Types Management - NEW! */}
+          <Link
+            href="/admin/events/ticket-types"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-4 rounded-lg">
+                <Ticket className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Ticket Types</h2>
+                <p className="text-gray-600">Manage ticket pricing</p>
+              </div>
+            </div>
+          </Link>
           {/* Social Media - Create Post */}
           <Link
             href="/admin/social/create"
