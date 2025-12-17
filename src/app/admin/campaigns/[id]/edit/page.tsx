@@ -324,7 +324,33 @@ export default function EditCampaign() {
       alert('Failed to activate campaign')
     }
   }
-
+  async function sendTestCampaign() {
+    if (steps.length === 0) {
+      alert('Please add at least one step before testing')
+      return
+    }
+  
+    if (!confirm('Send test campaign to yourself?')) return
+  
+    try {
+      const response = await fetch('/api/campaigns/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId })
+      })
+  
+      const data = await response.json()
+  
+      if (data.success) {
+        alert(`Test sent! ${data.stats.sent} messages sent, ${data.stats.failed} failed`)
+      } else {
+        alert('Test failed: ' + data.error)
+      }
+    } catch (error: any) {
+      console.error('Test error:', error)
+      alert('Failed to send test: ' + error.message)
+    }
+  }
   const channelIcons = {
     resend_email: Mail,
     twilio_sms: MessageSquare,
@@ -384,10 +410,17 @@ export default function EditCampaign() {
             <p className="text-gray-600">Build your campaign sequence</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={activateCampaign}
-              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
-            >
+          <button
+            onClick={sendTestCampaign}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            <Mail className="w-5 h-5" />
+            Send Test
+          </button>
+          <button
+            onClick={activateCampaign}
+            className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
+          >
               <Play className="w-5 h-5" />
               Activate Campaign
             </button>

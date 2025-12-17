@@ -21,6 +21,7 @@
     "react-dom": "19.2.0",
     "resend": "^6.5.2",
     "stripe": "^20.0.0",
+    "twilio": "^5.10.7",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/twilio": "^3.19.2",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
