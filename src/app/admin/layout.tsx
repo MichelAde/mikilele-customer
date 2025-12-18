@@ -1,7 +1,8 @@
 'use client'
 
-import ProtectedRoute from '@/components/ProtectedRoute'
-import { useAuth } from '@/contexts/AuthContext'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { LogOut } from 'lucide-react'
 
@@ -10,35 +11,72 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, role, signOut } = useAuth()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    checkUser()
+  }, [])
+
+  async function checkUser() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+
+    setUser(user)
+    setLoading(false)
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="min-h-screen bg-gray-50">
-        {/* Admin Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div>
-              <Link href="/admin" className="text-xl font-bold text-purple-600">
-                Admin Dashboard
-              </Link>
-              <p className="text-sm text-gray-600">
-                {user?.email} • <span className="capitalize">{role}</span>
-              </p>
-            </div>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Admin Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <Link href="/admin" className="text-xl font-bold text-purple-600">
+              Admin Dashboard
+            </Link>
+            <p className="text-sm text-gray-600">
+              {user?.email} • Super Admin
+            </p>
           </div>
-        </header>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
+      </header>
 
-        {/* Content */}
-        {children}
-      </div>
-    </ProtectedRoute>
+      {/* Content */}
+      {children}
+    </div>
   )
 }
