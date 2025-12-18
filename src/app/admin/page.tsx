@@ -6,6 +6,7 @@ import { Ticket } from 'lucide-react'
 import { CreditCard } from 'lucide-react'
 import { BookOpen } from 'lucide-react'
 import { Users } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -152,6 +153,21 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-xl font-semibold mb-1">Course Management</h2>
                 <p className="text-gray-600">AI-powered curriculum</p>
+              </div>
+            </div>
+          </Link>
+          {/* Attendance & Progress - NEW! */}
+          <Link
+            href="/admin/school/attendance"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-4 rounded-lg">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Attendance</h2>
+                <p className="text-gray-600">Track student progress</p>
               </div>
             </div>
           </Link>

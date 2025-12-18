@@ -60,16 +60,18 @@ export default function CreateEnrollment() {
 
   async function fetchUsers() {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email')
-        .order('email')
-        .limit(100)
-
-      if (error) throw error
-      setUsers(data || [])
+      const response = await fetch('/api/users/list')
+      const data = await response.json()
+  
+      if (data.success) {
+        setUsers(data.users)
+      } else {
+        console.error('Error fetching users:', data.error)
+        setUsers([])
+      }
     } catch (error) {
       console.error('Error fetching users:', error)
+      setUsers([])
     }
   }
 
@@ -164,12 +166,21 @@ export default function CreateEnrollment() {
               required
             >
               <option value="">Select a student...</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.email}
-                </option>
-              ))}
+              {users.length === 0 ? (
+                <option value="" disabled>No authenticated users yet - please sign up a user first</option>
+              ) : (
+                users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.email}
+                  </option>
+                ))
+              )}
             </select>
+            {users.length === 0 && (
+              <p className="text-xs text-yellow-600 mt-1">
+                ⚠️ No users found. Please create an account first, then come back to enroll.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
