@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   ArrowLeft, 
   Plus, 
@@ -35,6 +36,7 @@ interface Course {
 export default function CoursesManagement() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
+  const { hasPermission } = useAuth()
 
   useEffect(() => {
     fetchCourses()
@@ -294,6 +296,8 @@ export default function CoursesManagement() {
                       <Edit className="w-4 h-4" />
                     </Link>
 
+                    {/* Wrap Delete button with permission check */}
+                    {hasPermission('courses', 'delete') && (
                     <button
                       onClick={() => deleteCourse(course.id, course.title)}
                       className="py-2 px-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium text-sm transition"
@@ -301,6 +305,7 @@ export default function CoursesManagement() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                    )}
                   </div>
                 </div>
               )

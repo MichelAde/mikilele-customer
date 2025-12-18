@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   ArrowLeft, 
   Plus, 
@@ -44,6 +45,7 @@ export default function EnrollmentManagement() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterPayment, setFilterPayment] = useState<string>('all')
+  const { hasPermission } = useAuth()
 
   useEffect(() => {
     fetchEnrollments()
@@ -331,6 +333,8 @@ export default function EnrollmentManagement() {
                           >
                             <Edit className="w-4 h-4 text-gray-600" />
                           </Link>
+                          {/* Wrap Delete button with permission check */}
+                          {hasPermission('enrollments', 'delete') && (
                           <button
                             onClick={() => deleteEnrollment(enrollment.id)}
                             className="p-2 hover:bg-red-100 rounded-lg transition"
@@ -338,6 +342,7 @@ export default function EnrollmentManagement() {
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>

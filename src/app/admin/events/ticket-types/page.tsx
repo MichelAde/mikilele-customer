@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   ArrowLeft, 
   Plus, 
@@ -41,6 +42,7 @@ export default function TicketTypesManagement() {
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const { hasPermission } = useAuth()
   const [editingTicketType, setEditingTicketType] = useState<TicketType | null>(null)
 
   useEffect(() => {
@@ -304,6 +306,8 @@ export default function TicketTypesManagement() {
                         <Edit className="w-5 h-5 text-gray-600" />
                       </Link>
 
+                      {/* Wrap Delete button with permission check */}
+                      {hasPermission('events', 'delete') && (
                       <button
                         onClick={() => deleteTicketType(ticketType.id, ticketType.name)}
                         className="p-2 hover:bg-red-100 rounded-lg transition"
@@ -314,6 +318,7 @@ export default function TicketTypesManagement() {
                           ticketType.quantity_sold > 0 ? 'text-gray-400' : 'text-red-600'
                         }`} />
                       </button>
+                      )}
                     </div>
                   </div>
                 </div>

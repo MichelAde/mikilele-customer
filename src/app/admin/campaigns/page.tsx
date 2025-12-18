@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   Plus, 
   ArrowLeft, 
@@ -43,6 +44,7 @@ interface CampaignStats {
 
 export default function CampaignsDashboard() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const { hasPermission } = useAuth()
   const [stats, setStats] = useState<CampaignStats>({
     total: 0,
     active: 0,
@@ -207,6 +209,8 @@ export default function CampaignsDashboard() {
               <Users className="w-5 h-5" />
               Manage Segments
             </Link>
+          {/* Wrap Create button with permission check */}
+          {hasPermission('campaigns', 'create') && (
             <Link
               href="/admin/campaigns/create"
               className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 flex items-center gap-2"
@@ -214,6 +218,7 @@ export default function CampaignsDashboard() {
               <Plus className="w-5 h-5" />
               Create Campaign
             </Link>
+          )} 
           </div>
         </div>
 
@@ -395,7 +400,8 @@ export default function CampaignsDashboard() {
                           <Pause className="w-5 h-5 text-yellow-600" />
                         </button>
                       )}
-
+                    {/* Wrap Delete button with permission check */}
+                    {hasPermission('campaigns', 'delete') && (
                       <button
                         onClick={() => deleteCampaign(campaign.id, campaign.name)}
                         className="p-2 hover:bg-red-100 rounded-lg transition"
@@ -403,6 +409,7 @@ export default function CampaignsDashboard() {
                       >
                         <Trash2 className="w-5 h-5 text-red-600" />
                       </button>
+                    )}
                     </div>
                   </div>
                 </div>

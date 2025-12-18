@@ -7,9 +7,33 @@ import { CreditCard } from 'lucide-react'
 import { BookOpen } from 'lucide-react'
 import { Users } from 'lucide-react'
 import { CheckCircle } from 'lucide-react'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import { useAuth } from '@/contexts/AuthContext'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
+  const { user, role, isAdmin } = useAuth()
+  
+  return (
+    <ProtectedRoute requiredRole="admin">
+      {/* Existing admin dashboard code */}
+      <div className="min-h-screen bg-gray-50">
+        {/* Add role indicator */}
+        <div className="bg-white shadow">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-sm text-gray-600">
+                Logged in as: {user?.email} • Role: {role}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Rest of your dashboard */}
+      </div>
+    </ProtectedRoute>
+  )
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">

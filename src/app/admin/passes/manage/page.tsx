@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   ArrowLeft, 
   Plus, 
@@ -33,6 +34,7 @@ interface Pass {
 export default function PassManagement() {
   const [passes, setPasses] = useState<Pass[]>([])
   const [loading, setLoading] = useState(true)
+  const { hasPermission } = useAuth()
 
   useEffect(() => {
     fetchPasses()
@@ -286,6 +288,8 @@ export default function PassManagement() {
                     <Edit className="w-4 h-4" />
                   </Link>
 
+                  {/* Wrap Delete button with permission check */}
+                  {hasPermission('passes', 'delete') && (
                   <button
                     onClick={() => deletePass(pass.id, pass.name)}
                     className="py-2 px-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium text-sm transition"
@@ -293,6 +297,7 @@ export default function PassManagement() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  )}
                 </div>
               </div>
             ))}
