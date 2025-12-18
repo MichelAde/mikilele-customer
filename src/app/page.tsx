@@ -12,6 +12,7 @@ import { Loader2, LogOut, User, Ticket, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 
+
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([])

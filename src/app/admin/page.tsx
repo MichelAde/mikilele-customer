@@ -9,11 +9,33 @@ import { Users } from 'lucide-react'
 import { CheckCircle } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
+import { useState, useEffect } from 'react'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
   const { user, role, isAdmin } = useAuth()
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   
+  useEffect(() => {
+    fetchEvents()
+  }, [])
+
+  async function fetchEvents() {
+    try {
+      const response = await fetch('/api/events')
+      const data = await response.json()
+      
+      if (data.success) {
+        setEvents(data.events || [])
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error)
+      setEvents([]) // Set empty array on error
+    } finally {
+      setLoading(false)
+    }
+  }
   return (
     <ProtectedRoute requiredRole="admin">
       {/* Existing admin dashboard code */}
