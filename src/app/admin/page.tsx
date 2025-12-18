@@ -24,10 +24,19 @@ export default function AdminDashboard() {
   async function fetchEvents() {
     try {
       const response = await fetch('/api/events')
+      
+      if (!response.ok) {
+        console.error('Events API error:', response.status)
+        setEvents([])
+        return
+      }
+      
       const data = await response.json()
       
       if (data.success) {
         setEvents(data.events || [])
+      } else {
+        setEvents([])
       }
     } catch (error) {
       console.error('Error fetching events:', error)
