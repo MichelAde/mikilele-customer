@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { DollarSign } from 'lucide-react'
 import { Ticket } from 'lucide-react'
 import { CreditCard } from 'lucide-react'
+import { BookOpen } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { CalendarPlus, Share2, Library, Calendar as CalendarIcon, TrendingUp } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -120,6 +122,36 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-xl font-semibold mb-1">Pass Management</h2>
                 <p className="text-gray-600">Manage multi-event passes</p>
+              </div>
+            </div>
+          </Link>
+          {/* Enrollment Management - NEW! */}
+          <Link
+            href="/admin/school/enrollments"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-500 p-4 rounded-lg">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Enrollments</h2>
+                <p className="text-gray-600">Manage student enrollments</p>
+              </div>
+            </div>
+          </Link>
+          {/* Course Management - NEW! */}
+          <Link
+            href="/admin/school/courses"
+            className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-4 rounded-lg">
+                <BookOpen className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Course Management</h2>
+                <p className="text-gray-600">AI-powered curriculum</p>
               </div>
             </div>
           </Link>
