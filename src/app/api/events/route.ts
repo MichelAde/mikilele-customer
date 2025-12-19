@@ -11,7 +11,7 @@ export async function GET() {
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .order('date', { ascending: true })
+      .order('start_datetime', { ascending: true })
       .limit(10)
 
     if (error) throw error
