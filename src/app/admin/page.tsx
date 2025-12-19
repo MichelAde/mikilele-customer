@@ -36,6 +36,7 @@ export default function AdminDashboard() {
       if (!response.ok) {
         console.error('Events API error:', response.status)
         setEvents([])
+        setLoading(false) // ADD THIS
         return
       }
       
