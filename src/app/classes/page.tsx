@@ -1,300 +1,353 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/auth-context'
-import { Calendar, Clock, MapPin, Users, Star, ArrowLeft } from 'lucide-react'
+import { Calendar, Users, DollarSign, Clock, CheckCircle, MapPin } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
 
-interface DanceStyle {
+interface Course {
   id: string
-  name: string
+  title: string
+  slug: string
   description: string
-  image_url: string | null
-}
-
-interface ClassLevel {
-  id: string
-  name: string
-}
-
-interface Instructor {
-  id: string
-  name: string
-  photo_url: string | null
-}
-
-interface ClassTemplate {
-  id: string
-  name: string
-  description: string
-  duration_minutes: number
-  day_of_week: number
-  start_time: string
-  location: string
+  level: string
+  duration_weeks: number
   max_students: number
-  dance_styles: DanceStyle
-  class_levels: ClassLevel
-  instructors: Instructor
+  price: number
+  instructor: string
+  schedule: any
+  start_date: string
+  category: string
+  is_active: boolean
 }
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+interface ClassPackage {
+  id: string
+  name: string
+  description: string
+  credits: number
+  price: number
+  validity_days: number
+  is_active: boolean
+}
 
 export default function ClassesPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const [classes, setClasses] = useState<ClassTemplate[]>([])
-  const [danceStyles, setDanceStyles] = useState<DanceStyle[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [packages, setPackages] = useState<ClassPackage[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedStyle, setSelectedStyle] = useState<string>('all')
-  const [selectedLevel, setSelectedLevel] = useState<string>('all')
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     fetchData()
   }, [])
 
-  const fetchData = async () => {
+  async function fetchData() {
     try {
-      // Fetch dance styles
-      const { data: stylesData } = await supabase
-        .from('dance_styles')
+      // Fetch courses
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
         .select('*')
         .eq('is_active', true)
-        .order('sort_order')
+        .order('start_date', { ascending: true })
 
-      setDanceStyles(stylesData || [])
+      if (coursesError) {
+        console.error('Error fetching courses:', coursesError)
+      } else {
+        setCourses(coursesData || [])
+      }
 
-      // Fetch class templates
-      const { data: classesData } = await supabase
-        .from('class_templates')
-        .select(`
-          *,
-          dance_styles (id, name, description, image_url),
-          class_levels (id, name),
-          instructors (id, name, photo_url)
-        `)
+      // Fetch class packages
+      const { data: packagesData, error: packagesError } = await supabase
+        .from('class_packages')
+        .select('*')
         .eq('is_active', true)
-        .order('day_of_week')
-        .order('start_time')
 
-      setClasses(classesData || [])
+      if (packagesError) {
+        console.error('Error fetching packages:', packagesError)
+      } else {
+        setPackages(packagesData || [])
+      }
     } catch (error) {
-      console.error('Error fetching classes:', error)
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredClasses = classes.filter(cls => {
-    if (selectedStyle !== 'all' && cls.dance_styles.id !== selectedStyle) return false
-    if (selectedLevel !== 'all' && cls.class_levels.id !== selectedLevel) return false
-    return true
-  })
+  function formatDate(dateString: string) {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+  }
 
-  const getStyleColor = (styleName: string) => {
-    const colors: Record<string, string> = {
-      'Semba': 'bg-orange-100 text-orange-800',
-      'Kizomba': 'bg-purple-100 text-purple-800',
-      'Zouk': 'bg-blue-100 text-blue-800',
-    }
-    return colors[styleName] || 'bg-gray-100 text-gray-800'
+  function getScheduleDisplay(schedule: any) {
+    if (typeof schedule === 'string') return schedule
+    if (schedule?.display) return schedule.display
+    if (schedule?.day && schedule?.time) return `${schedule.day}s ${schedule.time}`
+    return 'Schedule TBD'
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading classes...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link
-            href="/"
-            className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Events
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="text-4xl">💃</div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dance Classes</h1>
-              <p className="text-gray-600 mt-1">Learn Semba, Kizomba & Zouk with expert instructors</p>
+      <div className="bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Mikilele Kizomba & Semba School
+          </h1>
+          <p className="text-xl opacity-90 mb-6">
+            Progressive classes every Thursday • All levels welcome • No partner required
+          </p>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              <span>Trinity United Church, Ottawa</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              <span>7:00 PM - 9:00 PM</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              <span>Limited to 30 students per block</span>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* CTA Banner */}
-        <div className="mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Ready to start dancing?</h2>
-              <p className="text-indigo-100">Save money with class packages - the more you buy, the more you save!</p>
+      {/* Class Structure */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
+          <h2 className="text-2xl font-bold mb-6">Every Thursday Night</h2>
+          <div className="grid md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl font-bold text-purple-600">1</span>
+              </div>
+              <h3 className="font-semibold mb-2">7:00 - 8:00 PM</h3>
+              <p className="text-gray-600 text-sm">Progressive Class</p>
             </div>
-            <Link
-              href="/classes/packages"
-              className="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors whitespace-nowrap"
-            >
-              View Packages
-            </Link>
+            <div className="text-center">
+              <div className="bg-pink-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl font-bold text-pink-600">2</span>
+              </div>
+              <h3 className="font-semibold mb-2">8:00 - 8:20 PM</h3>
+              <p className="text-gray-600 text-sm">Guided Practice</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl font-bold text-orange-600">3</span>
+              </div>
+              <h3 className="font-semibold mb-2">8:20 - 8:30 PM</h3>
+              <p className="text-gray-600 text-sm">Closing Circle</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl font-bold text-indigo-600">4</span>
+              </div>
+              <h3 className="font-semibold mb-2">8:30 - 9:00 PM</h3>
+              <p className="text-gray-600 text-sm">Free Social Prática</p>
+            </div>
+          </div>
+          <div className="mt-8 p-4 bg-purple-50 rounded-lg">
+            <p className="text-sm text-gray-700">
+              <strong>Last Thursday of each month:</strong> Extended social night with special activities!
+            </p>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mb-8 flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Dance Style</label>
-            <select
-              value={selectedStyle}
-              onChange={(e) => setSelectedStyle(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            >
-              <option value="all">All Styles</option>
-              {danceStyles.map(style => (
-                <option key={style.id} value={style.id}>{style.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            >
-              <option value="all">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Classes List */}
-        {filteredClasses.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No classes found</h3>
-            <p className="text-gray-600">Try adjusting your filters</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClasses.map((cls) => (
-              <div
-                key={cls.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                {/* Class Image/Header */}
-                <div className="h-48 bg-gradient-to-br from-indigo-500 to-purple-600 relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <div className="text-6xl mb-2">
-                        {cls.dance_styles.name === 'Semba' && '🎵'}
-                        {cls.dance_styles.name === 'Kizomba' && '💕'}
-                        {cls.dance_styles.name === 'Zouk' && '🌊'}
-                      </div>
-                      <h3 className="text-xl font-bold">{cls.name}</h3>
-                    </div>
-                  </div>
-                  
-                  {/* Badges */}
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStyleColor(cls.dance_styles.name)}`}>
-                      {cls.dance_styles.name}
+        {/* Course Blocks */}
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold mb-8">2026 Course Blocks</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {courses.map((course) => (
+              <div key={course.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition">
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold uppercase opacity-90">
+                      {course.level}
+                    </span>
+                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                      {course.duration_weeks} weeks
                     </span>
                   </div>
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-800">
-                      {cls.class_levels.name}
-                    </span>
-                  </div>
+                  <h3 className="text-2xl font-bold">{course.title}</h3>
                 </div>
 
-                {/* Class Details */}
                 <div className="p-6">
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {cls.description || cls.dance_styles.description}
-                  </p>
-
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium">{DAYS[cls.day_of_week]}s</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      <span>
-                        {cls.start_time} • {cls.duration_minutes} min
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{cls.location}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      <span>Max {cls.max_students} students</span>
-                    </div>
-
-                    {cls.instructors && (
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <Star className="w-4 h-4 text-yellow-400" />
-                        <span>with {cls.instructors.name}</span>
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Starts</p>
+                        <p className="font-semibold">{formatDate(course.start_date)}</p>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Schedule</p>
+                        <p className="font-semibold">{getScheduleDisplay(course.schedule)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Users className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Capacity</p>
+                        <p className="font-semibold">15 Lead / 15 Follow</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Pricing</p>
+                        <p className="font-semibold">${course.price} block / $25 drop-in</p>
+                      </div>
+                    </div>
                   </div>
 
-                  <Link
-                    href={`/classes/${cls.id}`}
-                    className="block w-full text-center bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    View Schedule & Enroll
-                  </Link>
+                  <p className="text-gray-600 text-sm mb-6 line-clamp-3">
+                    {course.description}
+                  </p>
+
+                  <button className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition">
+                    Enroll Now
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Class Packages */}
+        {packages.length > 0 && (
+          <div className="mb-16">
+            <h2 className="text-3xl font-bold mb-4">Drop-In & Prática Options</h2>
+            <p className="text-gray-600 mb-8">
+              Can't commit to a full block? Join us for individual classes or social practice sessions.
+            </p>
+            <div className="grid md:grid-cols-2 gap-8">
+              {packages.map((pkg) => (
+                <div key={pkg.id} className="bg-white rounded-lg shadow-lg p-6 border-2 border-gray-200 hover:border-purple-400 transition">
+                  <h3 className="text-2xl font-bold mb-3">{pkg.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-4xl font-bold text-purple-600">${pkg.price}</span>
+                    <span className="text-gray-500">per class</span>
+                  </div>
+                  <p className="text-gray-600 mb-6">{pkg.description}</p>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>{pkg.credits} credit{pkg.credits > 1 ? 's' : ''}</span>
+                    </div>
+                    {pkg.validity_days && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Valid for {pkg.validity_days} days</span>
+                      </div>
+                    )}
+                  </div>
+                  <button className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition">
+                    Purchase
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* Info Section */}
-        <div className="mt-16 bg-white rounded-xl shadow-sm p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-4xl mb-3">🎫</div>
-              <h3 className="font-semibold text-gray-900 mb-2">1. Buy Package</h3>
-              <p className="text-sm text-gray-600">Choose a class package that fits your schedule</p>
+        {/* What You Get */}
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-8 mb-12">
+          <h2 className="text-2xl font-bold mb-6">What's Included</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">Progressive Instruction</h4>
+                <p className="text-sm text-gray-600">Build skills week by week with structured curriculum</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl mb-3">📅</div>
-              <h3 className="font-semibold text-gray-900 mb-2">2. Book Classes</h3>
-              <p className="text-sm text-gray-600">Reserve your spot in upcoming classes</p>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">No Partner Required</h4>
+                <p className="text-sm text-gray-600">We rotate partners throughout the class</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl mb-3">💃</div>
-              <h3 className="font-semibold text-gray-900 mb-2">3. Attend & Learn</h3>
-              <p className="text-sm text-gray-600">Show up and dance with expert instructors</p>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">Free Social Practice</h4>
+                <p className="text-sm text-gray-600">Prática included with every class</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl mb-3">🌟</div>
-              <h3 className="font-semibold text-gray-900 mb-2">4. Track Progress</h3>
-              <p className="text-sm text-gray-600">View your attendance and credits in your dashboard</p>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">Small Class Sizes</h4>
+                <p className="text-sm text-gray-600">Maximum 30 students per block</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">Student Discounts</h4>
+                <p className="text-sm text-gray-600">$5 off events when enrolled</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold mb-1">Guest Workshops</h4>
+                <p className="text-sm text-gray-600">Priority access to special workshops</p>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+
+        {/* CTA */}
+        <div className="text-center bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-4">Ready to Start Your Dance Journey?</h2>
+          <p className="text-gray-600 mb-6">
+            Join Ottawa's premier Kizomba & Semba school. All levels welcome!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/auth/signup"
+              className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+            >
+              Create Account & Enroll
+            </Link>
+            <a
+              href="mailto:mikileleevents@gmail.com"
+              className="bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+            >
+              Contact Us
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
