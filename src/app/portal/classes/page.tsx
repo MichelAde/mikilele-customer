@@ -18,9 +18,6 @@ interface Enrollment {
     start_date: string
     duration_weeks: number
     level: string
-    organization: {
-      name: string
-    }
   }
 }
 
@@ -170,7 +167,6 @@ export default function MyClassesPage() {
                       {enrollment.courses.title}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {enrollment.courses.organization?.name}
                     </p>
                   </div>
                   {getStatusBadge(enrollment.status)}

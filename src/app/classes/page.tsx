@@ -37,8 +37,8 @@ export default function ClassesPage() {
   const [loading, setLoading] = useState(true)
 
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
   )
 
   useEffect(() => {
@@ -47,7 +47,6 @@ export default function ClassesPage() {
 
   async function fetchData() {
     try {
-      // Fetch courses
       const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select('*')
@@ -60,7 +59,6 @@ export default function ClassesPage() {
         setCourses(coursesData || [])
       }
 
-      // Fetch class packages
       const { data: packagesData, error: packagesError } = await supabase
         .from('class_packages')
         .select('*')
@@ -107,7 +105,6 @@ export default function ClassesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 text-white py-16">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
@@ -133,7 +130,6 @@ export default function ClassesPage() {
         </div>
       </div>
 
-      {/* Class Structure */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
           <h2 className="text-2xl font-bold mb-6">Every Thursday Night</h2>
@@ -174,7 +170,6 @@ export default function ClassesPage() {
           </div>
         </div>
 
-        {/* Course Blocks */}
         <div className="mb-16">
           <h2 className="text-3xl font-bold mb-8">2026 Course Blocks</h2>
           <div className="grid md:grid-cols-3 gap-8">
@@ -227,9 +222,7 @@ export default function ClassesPage() {
                     </div>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-6 line-clamp-3">
-                    {course.description}
-                  </p>
+                  <p className="text-gray-600 text-sm mb-6">{course.description}</p>
 
                   <button className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition">
                     Enroll Now
@@ -240,12 +233,11 @@ export default function ClassesPage() {
           </div>
         </div>
 
-        {/* Class Packages */}
         {packages.length > 0 && (
           <div className="mb-16">
             <h2 className="text-3xl font-bold mb-4">Drop-In & Prática Options</h2>
             <p className="text-gray-600 mb-8">
-              Can't commit to a full block? Join us for individual classes or social practice sessions.
+              Can&apos;t commit to a full block? Join us for individual classes or social practice sessions.
             </p>
             <div className="grid md:grid-cols-2 gap-8">
               {packages.map((pkg) => (
@@ -277,60 +269,44 @@ export default function ClassesPage() {
           </div>
         )}
 
-        {/* What You Get */}
         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-8 mb-12">
-          <h2 className="text-2xl font-bold mb-6">What's Included</h2>
+          <h2 className="text-2xl font-bold mb-6">What&apos;s Included</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
               <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
               <div>
                 <h4 className="font-semibold mb-1">Progressive Instruction</h4>
-                <p className="text-sm text-gray-600">Build skills week by week with structured curriculum</p>
+                <p className="text-sm text-gray-600">Build skills week by week</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
               <div>
                 <h4 className="font-semibold mb-1">No Partner Required</h4>
-                <p className="text-sm text-gray-600">We rotate partners throughout the class</p>
+                <p className="text-sm text-gray-600">We rotate partners</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
               <div>
                 <h4 className="font-semibold mb-1">Free Social Practice</h4>
-                <p className="text-sm text-gray-600">Prática included with every class</p>
+                <p className="text-sm text-gray-600">Prática included</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
               <div>
                 <h4 className="font-semibold mb-1">Small Class Sizes</h4>
-                <p className="text-sm text-gray-600">Maximum 30 students per block</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
-              <div>
-                <h4 className="font-semibold mb-1">Student Discounts</h4>
-                <p className="text-sm text-gray-600">$5 off events when enrolled</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
-              <div>
-                <h4 className="font-semibold mb-1">Guest Workshops</h4>
-                <p className="text-sm text-gray-600">Priority access to special workshops</p>
+                <p className="text-sm text-gray-600">Max 30 students</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CTA */}
         <div className="text-center bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold mb-4">Ready to Start Your Dance Journey?</h2>
           <p className="text-gray-600 mb-6">
-            Join Ottawa's premier Kizomba & Semba school. All levels welcome!
+            Join Ottawa&apos;s premier Kizomba & Semba school. All levels welcome!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

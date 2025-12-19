@@ -17,9 +17,6 @@ interface Pass {
     name: string
     type: string
     description: string
-    organization: {
-      name: string
-    }
   }
 }
 
@@ -48,8 +45,7 @@ export default function MyPassesPage() {
           pass_types (
             name,
             type,
-            description,
-            organization (name)
+            description
           )
         `)
         .eq('user_id', user.id)
@@ -155,7 +151,6 @@ export default function MyPassesPage() {
                         {pass.pass_types.name}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {pass.pass_types.organization?.name}
                       </p>
                     </div>
                     {getStatusBadge(status)}
