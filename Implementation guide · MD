@@ -1,0 +1,360 @@
+# 🏗️ MULTI-TENANT PLATFORM - IMPLEMENTATION GUIDE
+
+## 📋 FILES CREATED
+
+### **1. User Portal Pages**
+Place these in your Next.js project:
+
+```
+/src/app/portal/
+├── layout.tsx          → portal-layout.tsx
+├── page.tsx            → portal-overview.tsx
+├── tickets/
+│   └── page.tsx        → portal-tickets.tsx
+├── passes/
+│   └── page.tsx        → portal-passes.tsx
+├── classes/
+│   └── page.tsx        → portal-classes.tsx
+└── settings/
+    └── page.tsx        → portal-settings.tsx
+```
+
+### **2. Organization Management**
+```
+/src/app/organization/
+└── new/
+    └── page.tsx        → org-signup.tsx
+
+/src/components/
+└── OrganizationSwitcher.tsx  → org-switcher.tsx
+```
+
+### **3. Updated Classes Page**
+```
+/src/app/classes/
+└── page.tsx            → classes-page.tsx (from earlier)
+```
+
+---
+
+## 🗄️ DATABASE SETUP
+
+### **Run This SQL First:**
+
+```sql
+-- Fix the duplicate subdomain error
+DO $$
+DECLARE
+  mikilele_id UUID;
+BEGIN
+  SELECT id INTO mikilele_id FROM organization WHERE subdomain = 'mikilele';
+  
+  IF mikilele_id IS NULL THEN
+    UPDATE organization 
+    SET subdomain = 'mikilele', brand_color = '#7C3AED'
+    WHERE name = 'Mikilele Events';
+    SELECT id INTO mikilele_id FROM organization WHERE subdomain = 'mikilele';
+  END IF;
+  
+  IF mikilele_id IS NOT NULL THEN
+    UPDATE events SET organization_id = mikilele_id WHERE organization_id IS NULL;
+    UPDATE courses SET organization_id = mikilele_id WHERE organization_id IS NULL;
+    UPDATE pass_types SET organization_id = mikilele_id WHERE organization_id IS NULL;
+  END IF;
+END $$;
+
+-- Link your user account to Mikilele as owner
+DO $$
+DECLARE
+  mikilele_id UUID;
+  your_user_id UUID;
+BEGIN
+  SELECT id INTO mikilele_id FROM organization WHERE subdomain = 'mikilele';
+  SELECT user_id INTO your_user_id FROM admin_users WHERE role = 'super_admin' LIMIT 1;
+  
+  IF mikilele_id IS NOT NULL AND your_user_id IS NOT NULL THEN
+    INSERT INTO organization_members (organization_id, user_id, role, permissions)
+    VALUES (mikilele_id, your_user_id, 'owner', '{"all": true}'::jsonb)
+    ON CONFLICT (organization_id, user_id) 
+    DO UPDATE SET role = 'owner', permissions = '{"all": true}'::jsonb;
+  END IF;
+END $$;
+```
+
+---
+
+## 🔗 NAVIGATION UPDATES
+
+### **Update Main Navigation Header**
+Add User Menu dropdown in your main layout:
+
+```typescript
+// In /src/app/layout.tsx or navigation component
+import Link from 'next/link'
+import { User, LogOut } from 'lucide-react'
+
+// Add this to your header:
+{user ? (
+  <div className="relative">
+    <button className="flex items-center gap-2">
+      <User className="w-5 h-5" />
+      <span>My Account</span>
+    </button>
+    {/* Dropdown menu */}
+    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
+      <Link href="/portal">Overview</Link>
+      <Link href="/portal/tickets">My Tickets</Link>
+      <Link href="/portal/passes">My Passes</Link>
+      <Link href="/portal/classes">My Classes</Link>
+      <Link href="/portal/settings">Settings</Link>
+      <button onClick={logout}>Logout</button>
+    </div>
+  </div>
+) : (
+  <Link href="/auth/login">Login</Link>
+)}
+```
+
+### **Update Admin Layout**
+Add Organization Switcher to admin header:
+
+```typescript
+// In /src/app/admin/layout.tsx
+import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+
+// Add to admin header:
+<div className="flex items-center gap-4">
+  <OrganizationSwitcher />
+  {/* Rest of admin nav */}
+</div>
+```
+
+---
+
+## 🎯 HOW IT WORKS
+
+### **For Mikilele Events (You):**
+1. ✅ Your account is linked as **owner** of Mikilele organization
+2. ✅ All existing events/courses/passes belong to Mikilele
+3. ✅ You can manage everything through `/admin`
+4. ✅ Customers buy tickets and see them in their portal
+
+### **For New Organizers:**
+1. User creates account
+2. Goes to `/organization/new`
+3. Fills out 3-step signup
+4. Automatically becomes **owner** of their org
+5. Gets their own admin panel with org switcher
+6. Manages their own events independently
+
+### **For Customers:**
+1. Create account once
+2. Buy tickets from ANY organizer
+3. See ALL purchases in unified portal at `/portal`
+4. All tickets/passes/classes in one place
+
+---
+
+## 🔄 DATA ISOLATION
+
+Each organization's data is completely isolated:
+
+**Events Query (Automatic):**
+```typescript
+// When viewing events, filter by selected org
+const { data } = await supabase
+  .from('events')
+  .select('*')
+  .eq('organization_id', selectedOrgId)  // ← Isolation
+```
+
+**RLS Policies Handle Security:**
+- Org members can only manage their own org's content
+- Customers can see all public content
+- Purchases are linked to customers, not orgs
+
+---
+
+## 📱 USER FLOWS
+
+### **Scenario 1: Customer Buys from Multiple Orgs**
+```
+1. Customer creates account → user@example.com
+2. Buys ticket from Mikilele Events
+3. Buys ticket from Ottawa Dance Co
+4. Visits /portal/tickets
+5. Sees BOTH tickets in one list!
+```
+
+### **Scenario 2: Admin Manages Multiple Orgs**
+```
+1. User is owner of "Mikilele Events"
+2. Also becomes admin at "Ottawa Dance Co"
+3. Visits /admin
+4. Uses org switcher to toggle between orgs
+5. Content/events change based on selected org
+```
+
+### **Scenario 3: New Organizer Signs Up**
+```
+1. Visit /organization/new
+2. Fill out 3-step form
+3. Organization created instantly
+4. Redirected to /admin?org={new_org_id}
+5. Ready to create first event!
+```
+
+---
+
+## 🚀 DEPLOYMENT STEPS
+
+### **1. Add Files to Project:**
+```bash
+# Copy all downloaded files to correct locations
+# See directory structure above
+```
+
+### **2. Run Database Migration:**
+```bash
+# Run the SQL fixes in Supabase SQL Editor
+```
+
+### **3. Update Environment Variables:**
+```env
+NEXT_PUBLIC_BASE_URL=https://app.mikilele.com
+# (all your existing env vars)
+```
+
+### **4. Deploy:**
+```powershell
+vercel --prod
+```
+
+---
+
+## ✅ TESTING CHECKLIST
+
+### **Test User Portal:**
+- [ ] Visit `/portal` (should show overview)
+- [ ] Check `/portal/tickets` (shows purchased tickets)
+- [ ] Check `/portal/passes` (shows active passes)
+- [ ] Check `/portal/classes` (shows enrollments)
+- [ ] Check `/portal/settings` (update profile)
+
+### **Test Organization Signup:**
+- [ ] Visit `/organization/new`
+- [ ] Complete 3-step signup
+- [ ] Verify org created in database
+- [ ] Check you're added as owner in organization_members
+
+### **Test Org Switcher:**
+- [ ] Visit `/admin`
+- [ ] See org switcher in header
+- [ ] Click to see dropdown
+- [ ] Switch between orgs (if you have multiple)
+- [ ] Verify content changes based on selected org
+
+### **Test Multi-Org Purchase:**
+- [ ] Create second test organization
+- [ ] Create event in that org
+- [ ] Purchase ticket as customer
+- [ ] Check portal shows tickets from BOTH orgs
+
+---
+
+## 💰 MONETIZATION READY
+
+### **Subscription Tiers:**
+```typescript
+const PRICING = {
+  free: {
+    price: 0,
+    events: 10,
+    features: ['basic']
+  },
+  pro: {
+    price: 29,
+    events: 999999,
+    features: ['all']
+  },
+  enterprise: {
+    price: 99,
+    events: 999999,
+    features: ['all', 'custom-domain', 'white-label']
+  }
+}
+```
+
+### **Revenue Model:**
+1. Monthly subscriptions
+2. Transaction fees (2-3% via Stripe Connect)
+3. Premium features (white-label, custom domain)
+
+---
+
+## 🎨 BRANDING
+
+Each org can customize:
+- **Logo** (logo_url)
+- **Brand Color** (brand_color)
+- **Subdomain** (yourorg.myplatform.com)
+- **Custom Domain** (Enterprise: yourorg.com)
+
+---
+
+## 🔐 SECURITY
+
+### **RLS Policies:**
+✅ Org members can only manage their own content
+✅ Customers can view all public events
+✅ Purchases are properly isolated
+✅ Admin actions are logged
+
+### **Permissions:**
+```typescript
+{
+  "all": true,           // Super admin
+  "events": true,        // Can manage events
+  "campaigns": true,     // Can manage marketing
+  "reports": true        // Can view analytics
+}
+```
+
+---
+
+## 📞 SUPPORT
+
+If customers have issues:
+- They contact the org they bought from
+- Each org handles their own support
+- Platform provides tools, not customer service
+
+---
+
+## 🌟 NEXT FEATURES
+
+### **Phase 1 (Current):**
+✅ Multi-tenant architecture
+✅ Unified customer portal
+✅ Org switcher for admins
+✅ Organization signup
+
+### **Phase 2 (Future):**
+- [ ] Stripe Connect (direct payouts per org)
+- [ ] Custom domains per org
+- [ ] White-label mode
+- [ ] Cross-org passes
+- [ ] Analytics dashboard per org
+- [ ] Team member invitations
+
+---
+
+## 🎉 YOU'RE READY TO LAUNCH!
+
+You now have a **complete SaaS platform** where:
+- Mikilele Events can operate independently
+- Other organizers can sign up and run their events
+- Customers have unified accounts across all orgs
+- Everything is scalable and monetizable
+
+**Deploy and test thoroughly before going live!** 🚀
