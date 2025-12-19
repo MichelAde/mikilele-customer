@@ -60,9 +60,9 @@ export default function Navigation() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
             <Link
-              href="/events"
+              href="/"
               className={`text-sm font-medium transition ${
-                isActive('/events')
+                pathname === '/' || pathname?.startsWith('/events')
                   ? 'text-purple-600'
                   : 'text-gray-700 hover:text-purple-600'
               }`}
@@ -220,7 +220,7 @@ export default function Navigation() {
           <div className="md:hidden border-t border-gray-200 py-4">
             <div className="flex flex-col gap-2">
               <Link
-                href="/events"
+                href="/"
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >

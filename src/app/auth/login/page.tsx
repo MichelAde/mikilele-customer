@@ -13,8 +13,8 @@ export default function LoginPage() {
   const router = useRouter()
 
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
   )
 
   async function handleLogin(e: React.FormEvent) {
@@ -30,7 +30,7 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      router.push('/admin')
+      router.push('/')  // ✅ CHANGED: Goes to homepage instead of admin
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -96,7 +96,7 @@ export default function LoginPage() {
               href="/auth/signup"
               className="text-sm text-purple-600 hover:text-purple-700"
             >
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </Link>
           </div>
         </div>

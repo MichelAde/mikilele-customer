@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
-import { LogOut } from 'lucide-react'
-import { User, Shield } from 'lucide-react'
+import { LogOut, User, Home } from 'lucide-react'
+import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 
 export default function AdminLayout({
   children,
@@ -17,8 +17,8 @@ export default function AdminLayout({
   const router = useRouter()
 
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
   )
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function AdminLayout({
 
   async function handleSignOut() {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/')
   }
 
   if (loading) {
@@ -58,41 +58,50 @@ export default function AdminLayout({
       
       {/* Admin Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <Link href="/admin" className="text-xl font-bold text-purple-600">
-              Admin Dashboard
-            </Link>
-            <Link
-              href="/portal"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-purple-100 transition"
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition">
+                <Home className="w-5 h-5" />
+                <span className="text-sm font-medium">Back to Site</span>
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link href="/portal" className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition">
+                <User className="w-5 h-5" />
+                <span className="text-sm font-medium">My Account</span>
+              </Link>
+            </div>
+            
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 transition"
             >
-              <User className="w-5 h-5" />
-              <span>My Account</span>
-            </Link>
-            <Link
-              href="/admin"
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-            >
-              <Shield className="w-5 h-5" />
-              <span>Admin</span>
-            </Link>
-            <p className="text-sm text-gray-600">
-              {user?.email} • Super Admin
-            </p>
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+
+          {/* Organization Switcher Row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage your events, classes, and campaigns
+              </p>
+            </div>
+            
+            {/* Organization Switcher */}
+            <div className="w-80">
+              <OrganizationSwitcher />
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Content */}
-      {children}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {children}
+      </div>
     </div>
   )
 }
