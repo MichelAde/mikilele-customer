@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { User, Menu, X, Home, Calendar, GraduationCap, CreditCard, Settings as SettingsIcon, LogOut, Ticket } from 'lucide-react'
+import { User, Menu, X, Home, Calendar, GraduationCap, CreditCard, Settings as SettingsIcon, LogOut, Ticket, Shield } from 'lucide-react'
 
 export default function Navigation() {
   const [user, setUser] = useState<any>(null)
@@ -159,10 +159,22 @@ export default function Navigation() {
                         Settings
                       </Link>
                       
+                      {/* Admin Link - Purple highlight */}
+                      <div className="border-t border-gray-200 mt-2 pt-2">
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Shield className="w-4 h-4" />
+                          Admin Dashboard
+                        </Link>
+                      </div>
+                      
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
                         >
                           <LogOut className="w-4 h-4" />
                           Logout
@@ -238,6 +250,13 @@ export default function Navigation() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     My Account
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="px-4 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin Dashboard
                   </Link>
                   <button
                     onClick={() => {
