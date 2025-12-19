@@ -21,49 +21,31 @@ import {
 } from 'lucide-react'
 
 export default function AdminDashboard() {
-  const { user, role, isAdmin } = useAuth()
-  const [events, setEvents] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user, role } = useAuth()
+  const [events, setEvents] = useState<any[]>([])
+  const [eventsLoading, setEventsLoading] = useState(true)
   
   useEffect(() => {
-    fetchEvents()
-  }, [])
+    if (user) {
+      fetchEvents()
+    }
+  }, [user])
 
   async function fetchEvents() {
     try {
       const response = await fetch('/api/events')
       
-      if (!response.ok) {
-        console.error('Events API error:', response.status)
-        setEvents([])
-        setLoading(false) // ADD THIS
-        return
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setEvents(data.events || [])
-      } else {
-        setEvents([])
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setEvents(data.events || [])
+        }
       }
     } catch (error) {
       console.error('Error fetching events:', error)
-      setEvents([])
     } finally {
-      setLoading(false)
+      setEventsLoading(false)
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -74,8 +56,13 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
             <p className="text-gray-600">
-              Logged in as: {user?.email} • Role: <span className="capitalize font-semibold">{role}</span>
+              Welcome back, {user?.email} • <span className="capitalize font-semibold text-purple-600">{role}</span>
             </p>
+            {!eventsLoading && (
+              <p className="text-sm text-gray-500 mt-1">
+                {events.length} active events
+              </p>
+            )}
           </div>
 
           {/* Admin Cards Grid */}
@@ -84,7 +71,7 @@ export default function AdminDashboard() {
             {/* Create Event */}
             <Link
               href="/admin/create-event"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-4 rounded-lg">
@@ -100,7 +87,7 @@ export default function AdminDashboard() {
             {/* Marketing Campaigns */}
             <Link
               href="/admin/campaigns"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-4 rounded-lg">
@@ -116,7 +103,7 @@ export default function AdminDashboard() {
             {/* Campaign Analytics */}
             <Link
               href="/admin/campaigns/analytics"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-green-500 to-teal-500 p-4 rounded-lg">
@@ -132,7 +119,7 @@ export default function AdminDashboard() {
             {/* Sales Dashboard */}
             <Link
               href="/admin/events/sales"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-4 rounded-lg">
@@ -148,7 +135,7 @@ export default function AdminDashboard() {
             {/* Ticket Types */}
             <Link
               href="/admin/events/ticket-types"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-lg">
@@ -164,7 +151,7 @@ export default function AdminDashboard() {
             {/* Pass Management */}
             <Link
               href="/admin/passes/manage"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-indigo-500 to-purple-500 p-4 rounded-lg">
@@ -180,7 +167,7 @@ export default function AdminDashboard() {
             {/* Social Media - Create Post */}
             <Link
               href="/admin/social/create"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-lg">
@@ -196,7 +183,7 @@ export default function AdminDashboard() {
             {/* Posts Library */}
             <Link
               href="/admin/social/posts"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-green-500 to-teal-500 p-4 rounded-lg">
@@ -212,7 +199,7 @@ export default function AdminDashboard() {
             {/* Content Calendar */}
             <Link
               href="/admin/social/calendar"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-orange-500 to-red-500 p-4 rounded-lg">
@@ -228,7 +215,7 @@ export default function AdminDashboard() {
             {/* Course Management */}
             <Link
               href="/admin/school/courses"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-blue-600 to-cyan-600 p-4 rounded-lg">
@@ -244,7 +231,7 @@ export default function AdminDashboard() {
             {/* Enrollment Management */}
             <Link
               href="/admin/school/enrollments"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-emerald-500 to-teal-500 p-4 rounded-lg">
@@ -260,7 +247,7 @@ export default function AdminDashboard() {
             {/* Attendance & Progress */}
             <Link
               href="/admin/school/attendance"
-              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200"
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border border-gray-200 hover:border-purple-300"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-4 rounded-lg">

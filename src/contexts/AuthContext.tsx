@@ -3,15 +3,14 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import { getUserRole, hasPermission, UserRole } from '@/lib/rbac'
 
 interface AuthContextType {
   user: any | null
-  role: UserRole
+  role: string
   permissions: any
   loading: boolean
   signOut: () => Promise<void>
-  hasPermission: (resource: string, action: 'create' | 'read' | 'update' | 'delete') => boolean
+  hasPermission: (resource: string, action: string) => boolean
   isAdmin: boolean
 }
 
@@ -27,7 +26,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null)
-  const [role, setRole] = useState<UserRole>('user')
+  const [role, setRole] = useState<string>('user')
   const [permissions, setPermissions] = useState<any>({})
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -40,18 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     checkUser()
 
+    // Listen to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
           setUser(session.user)
-          const roleData = await getUserRole(session.user.id)
-          setRole(roleData.role)
-          setPermissions(roleData.permissions)
+          await fetchUserRole(session.user.id)
         } else {
           setUser(null)
           setRole('user')
           setPermissions({})
         }
+        setLoading(false)
       }
     )
 
@@ -61,16 +60,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
-      setUser(user)
-      const roleData = await getUserRole(user.id)
-      setRole(roleData.role)
-      setPermissions(roleData.permissions)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        setUser(user)
+        await fetchUserRole(user.id)
+      }
+    } catch (error) {
+      console.error('Error checking user:', error)
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
+  }
+
+  async function fetchUserRole(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('role, permissions')
+        .eq('user_id', userId)
+        .single()
+
+      if (data && !error) {
+        setRole(data.role || 'user')
+        setPermissions(data.permissions || {})
+      } else {
+        // If not in admin_users, they're a regular user
+        setRole('user')
+        setPermissions({})
+      }
+    } catch (error) {
+      console.error('Error fetching role:', error)
+      setRole('user')
+      setPermissions({})
+    }
   }
 
   async function signOut() {
@@ -81,8 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/')
   }
 
-  const checkPermission = (resource: string, action: 'create' | 'read' | 'update' | 'delete') => {
-    return hasPermission(role, resource, action)
+  const checkPermission = (resource: string, action: string) => {
+    // Super admin has all permissions
+    if (role === 'super_admin') return true
+    
+    // Check specific permissions
+    if (permissions.all) return true
+    if (permissions[resource]) return true
+    
+    return false
   }
 
   const isAdmin = ['super_admin', 'admin'].includes(role)
