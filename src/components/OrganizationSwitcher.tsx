@@ -33,22 +33,48 @@ export default function OrganizationSwitcher() {
   async function fetchOrganizations() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Get all organizations where user is a member
-      const { data: memberships } = await supabase
+      console.log('🔍 Fetching orgs for user:', user?.id)
+      
+      if (!user) {
+        console.log('❌ No user found')
+        return
+      }
+  
+      // Fetch memberships with organization data
+      const { data: memberships, error } = await supabase
         .from('organization_members')
-        .select('organization_id, role, organization (*)')
+        .select(`
+          organization_id,
+          role,
+          organization:organization_id (
+            id,
+            name,
+            subdomain,
+            logo_url,
+            brand_color
+          )
+        `)
         .eq('user_id', user.id)
-
-      if (memberships) {
-        const orgs = memberships.map((m: any) => m.organization).filter(Boolean)
+  
+      console.log('📊 Memberships query result:', { memberships, error })
+  
+      if (error) {
+        console.error('❌ Error fetching memberships:', error)
+        return
+      }
+  
+      if (memberships && memberships.length > 0) {
+        const orgs = memberships
+          .map((m: any) => m.organization)
+          .filter(Boolean)
+        
+        console.log('✅ Organizations found:', orgs)
         setOrganizations(orgs)
-
+  
         // Set selected org from URL param or first org
         const orgId = searchParams.get('org')
         if (orgId) {
-          const org = orgs.find((o: Organization) => o.id === orgId)
+          const org = orgs.find((o: any) => o.id === orgId)
           if (org) {
             setSelectedOrg(org)
             localStorage.setItem('selectedOrgId', org.id)
@@ -56,13 +82,15 @@ export default function OrganizationSwitcher() {
         } else {
           const savedOrgId = localStorage.getItem('selectedOrgId')
           const org = savedOrgId 
-            ? orgs.find((o: Organization) => o.id === savedOrgId)
+            ? orgs.find((o: any) => o.id === savedOrgId)
             : orgs[0]
           if (org) setSelectedOrg(org)
         }
+      } else {
+        console.log('⚠️ No memberships found')
       }
     } catch (error) {
-      console.error('Error fetching organizations:', error)
+      console.error('💥 Exception in fetchOrganizations:', error)
     } finally {
       setLoading(false)
     }
