@@ -22,8 +22,8 @@ export default function OrganizationSwitcher() {
   const searchParams = useSearchParams()
 
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
   )
 
   useEffect(() => {
@@ -33,48 +33,59 @@ export default function OrganizationSwitcher() {
   async function fetchOrganizations() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      console.log('🔍 Fetching orgs for user:', user?.id)
+      console.log('🔍 User ID:', user?.id)
       
       if (!user) {
         console.log('❌ No user found')
+        setLoading(false)
         return
       }
-  
-      // Fetch memberships with organization data
-      const { data: memberships, error } = await supabase
+
+      // Fetch organization memberships
+      const { data: memberships, error: membershipsError } = await supabase
         .from('organization_members')
-        .select(`
-          organization_id,
-          role,
-          organization:organization_id (
-            id,
-            name,
-            subdomain,
-            logo_url,
-            brand_color
-          )
-        `)
+        .select('organization_id, role')
         .eq('user_id', user.id)
-  
-      console.log('📊 Memberships query result:', { memberships, error })
-  
-      if (error) {
-        console.error('❌ Error fetching memberships:', error)
+
+      console.log('📊 Memberships:', memberships)
+
+      if (membershipsError) {
+        console.error('❌ Memberships error:', membershipsError)
+        setLoading(false)
         return
       }
-  
-      if (memberships && memberships.length > 0) {
-        const orgs = memberships
-          .map((m: any) => m.organization)
-          .filter(Boolean)
-        
-        console.log('✅ Organizations found:', orgs)
+
+      if (!memberships || memberships.length === 0) {
+        console.log('⚠️ No memberships found')
+        setLoading(false)
+        return
+      }
+
+      // Get organization IDs
+      const orgIds = memberships.map((m: any) => m.organization_id)
+      console.log('🔑 Org IDs:', orgIds)
+
+      // Fetch organizations
+      const { data: orgs, error: orgsError } = await supabase
+        .from('organization')
+        .select('id, name, subdomain, logo_url, brand_color')
+        .in('id', orgIds)
+
+      console.log('🏢 Organizations:', orgs)
+
+      if (orgsError) {
+        console.error('❌ Organizations error:', orgsError)
+        setLoading(false)
+        return
+      }
+
+      if (orgs && orgs.length > 0) {
         setOrganizations(orgs)
-  
-        // Set selected org from URL param or first org
+
+        // Set selected org from URL param or localStorage
         const orgId = searchParams.get('org')
         if (orgId) {
-          const org = orgs.find((o: any) => o.id === orgId)
+          const org = orgs.find((o: Organization) => o.id === orgId)
           if (org) {
             setSelectedOrg(org)
             localStorage.setItem('selectedOrgId', org.id)
@@ -82,15 +93,18 @@ export default function OrganizationSwitcher() {
         } else {
           const savedOrgId = localStorage.getItem('selectedOrgId')
           const org = savedOrgId 
-            ? orgs.find((o: any) => o.id === savedOrgId)
+            ? orgs.find((o: Organization) => o.id === savedOrgId)
             : orgs[0]
-          if (org) setSelectedOrg(org)
+          if (org) {
+            setSelectedOrg(org)
+            localStorage.setItem('selectedOrgId', org.id)
+          }
         }
-      } else {
-        console.log('⚠️ No memberships found')
+
+        console.log('✅ Setup complete')
       }
     } catch (error) {
-      console.error('💥 Exception in fetchOrganizations:', error)
+      console.error('💥 Error:', error)
     } finally {
       setLoading(false)
     }
@@ -110,18 +124,28 @@ export default function OrganizationSwitcher() {
   }
 
   if (organizations.length === 0) {
-    return null
+    return (
+      <div className="w-64">
+        <button
+          onClick={() => router.push('/organization/new')}
+          className="flex items-center gap-3 w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="font-semibold">Create Organization</span>
+        </button>
+      </div>
+    )
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-80">
       {/* Selected Organization Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-3 w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-300 transition"
       >
         <div 
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
           style={{ backgroundColor: selectedOrg?.brand_color || '#7C3AED' }}
         >
           {selectedOrg?.logo_url ? (
