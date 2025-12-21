@@ -46,7 +46,7 @@ export default function EventDetailPage() {
         .from('ticket_types')
         .select('*')
         .eq('event_id', eventData.id)
-        .eq('is_available', true)
+        .eq('is_active', true)
         .order('sort_order', { ascending: true })
 
       setTickets(ticketsData || [])
