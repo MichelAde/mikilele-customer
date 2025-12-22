@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Ticket, Calendar, MapPin, Clock, Download, QrCode } from 'lucide-react'
+import { Calendar, MapPin, Ticket, Download, QrCode } from 'lucide-react'
 
 interface TicketData {
   id: string
   order_id: string
   event_id: string
   ticket_type: string
+  quantity: number
   price: number
   status: string
   created_at: string
@@ -23,14 +24,13 @@ interface TicketData {
 }
 
 export default function MyTicketsPage() {
-  const [upcomingTickets, setUpcomingTickets] = useState<TicketData[]>([])
-  const [pastTickets, setPastTickets] = useState<TicketData[]>([])
+  const [tickets, setTickets] = useState<TicketData[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
 
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
   )
 
   useEffect(() => {
@@ -42,81 +42,45 @@ export default function MyTicketsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Fetch all orders with items and events
-      const { data: orders } = await supabase
-        .from('orders')
+      const { data, error } = await supabase
+        .from('order_items')
         .select(`
           *,
-          order_items (
-            *,
-            events (
-              title,
-              start_datetime,
-              venue_name,
-              address,
-              city,
-              province
-            )
+          events (
+            title,
+            start_datetime,
+            venue_name,
+            address,
+            city,
+            province
           )
         `)
         .eq('user_id', user.id)
-        .eq('status', 'completed')
         .order('created_at', { ascending: false })
 
-      if (!orders) return
-
-      const now = new Date().toISOString()
-      const upcoming: TicketData[] = []
-      const past: TicketData[] = []
-
-      orders.forEach(order => {
-        order.order_items?.forEach((item: any) => {
-          const ticket = {
-            id: item.id,
-            order_id: order.id,
-            event_id: item.event_id,
-            ticket_type: item.ticket_type_name || 'General Admission',
-            price: parseFloat(item.price),
-            status: order.status,
-            created_at: order.created_at,
-            events: item.events
-          }
-
-          if (item.events?.start_datetime > now) {
-            upcoming.push(ticket)
-          } else {
-            past.push(ticket)
-          }
-        })
-      })
-
-      setUpcomingTickets(upcoming)
-      setPastTickets(past)
+      if (error) {
+        console.error('Error fetching tickets:', error)
+      } else {
+        setTickets(data || [])
+      }
     } catch (error) {
-      console.error('Error fetching tickets:', error)
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  function formatDate(dateString: string) {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+  const upcomingTickets = tickets.filter(ticket => {
+    const eventDate = new Date(ticket.events?.start_datetime)
+    return eventDate >= new Date()
+  })
 
-  function formatTime(dateString: string) {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
+  const pastTickets = tickets.filter(ticket => {
+    const eventDate = new Date(ticket.events?.start_datetime)
+    return eventDate < new Date()
+  })
+
+  const displayTickets = activeTab === 'upcoming' ? upcomingTickets : pastTickets
 
   if (loading) {
     return (
@@ -126,8 +90,6 @@ export default function MyTicketsPage() {
     )
   }
 
-  const tickets = activeTab === 'upcoming' ? upcomingTickets : pastTickets
-
   return (
     <div>
       <div className="mb-8">
@@ -135,11 +97,10 @@ export default function MyTicketsPage() {
         <p className="text-gray-600">View and manage your event tickets</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-4 mb-6 border-b border-gray-200">
         <button
           onClick={() => setActiveTab('upcoming')}
-          className={`pb-3 px-4 font-medium transition ${
+          className={`px-4 py-2 font-medium transition ${
             activeTab === 'upcoming'
               ? 'text-purple-600 border-b-2 border-purple-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -149,7 +110,7 @@ export default function MyTicketsPage() {
         </button>
         <button
           onClick={() => setActiveTab('past')}
-          className={`pb-3 px-4 font-medium transition ${
+          className={`px-4 py-2 font-medium transition ${
             activeTab === 'past'
               ? 'text-purple-600 border-b-2 border-purple-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -159,80 +120,89 @@ export default function MyTicketsPage() {
         </button>
       </div>
 
-      {/* Tickets List */}
-      {tickets.length === 0 ? (
+      {displayTickets.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Ticket className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {activeTab === 'upcoming' ? 'No upcoming events' : 'No past events'}
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            {activeTab === 'upcoming' ? 'No upcoming tickets' : 'No past tickets'}
           </h3>
           <p className="text-gray-600 mb-6">
             {activeTab === 'upcoming' 
-              ? 'Browse events and get your tickets'
-              : 'Your past event tickets will appear here'}
+              ? 'You have not purchased any tickets yet.' 
+              : 'You do not have any past tickets.'}
           </p>
-          {activeTab === 'upcoming' && (
-            <a
-              href="/events"
-              className="inline-block bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
-            >
-              Browse Events
-            </a>
-          )}
+          <a
+            href="/"
+            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+          >
+            Browse Events
+          </a>
         </div>
       ) : (
         <div className="space-y-4">
-          {tickets.map((ticket) => (
-            <div key={ticket.id} className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
-              <div className="flex">
-                {/* Left side - Event Info */}
-                <div className="flex-1 p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">
-                        {ticket.events.title}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                      </p>
-                    </div>
-                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {ticket.ticket_type}
-                    </span>
-                  </div>
+          {displayTickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {ticket.events?.title || 'Event'}
+                  </h3>
 
                   <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <Calendar className="w-5 h-5" />
-                      <span>{formatDate(ticket.events.start_datetime)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <Clock className="w-5 h-5" />
-                      <span>{formatTime(ticket.events.start_datetime)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <MapPin className="w-5 h-5" />
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Calendar className="w-4 h-4" />
                       <span>
-                        {ticket.events.venue_name}, {ticket.events.city}, {ticket.events.province}
+                        {new Date(ticket.events?.start_datetime).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>
+                        {ticket.events?.venue_name || 'Venue TBD'}
+                        {ticket.events?.city && `, ${ticket.events.city}`}
+                        {ticket.events?.province && `, ${ticket.events.province}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Ticket className="w-4 h-4" />
+                      <span>
+                        {ticket.ticket_type} - Qty: {ticket.quantity} - ${ticket.price?.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
-                    <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
-                      <QrCode className="w-4 h-4" />
-                      View QR Code
-                    </button>
-                    <button className="flex items-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      ticket.status === 'confirmed' 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {ticket.status || 'Pending'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right side - Price */}
-                <div className="w-32 bg-gradient-to-br from-purple-500 to-pink-500 text-white p-6 flex flex-col items-center justify-center">
-                  <p className="text-sm opacity-90 mb-1">Paid</p>
-                  <p className="text-3xl font-bold">${ticket.price}</p>
+                <div className="flex flex-col gap-2 ml-4">
+                  <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
+                    <QrCode className="w-4 h-4" />
+                    View QR
+                  </button>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition text-sm">
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
                 </div>
               </div>
             </div>
