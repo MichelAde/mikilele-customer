@@ -208,8 +208,15 @@ export default function TicketTypesManagement() {
                         </div>
 
                         {ticketType.events && (
-                          <div className="text-sm text-gray-600 mb-3">
-                            Event: {ticketType.events.title}
+                          <div className="text-sm text-gray-600 mb-3 flex items-center justify-between">
+                            <span>Event: {ticketType.events.title}</span>
+                            <Link
+                              href={`/admin/events/${ticketType.event_id}/edit`}
+                              className="text-purple-600 hover:text-purple-700 text-xs font-medium flex items-center gap-1"
+                            >
+                              <Edit className="w-3 h-3" />
+                              Edit Event
+                            </Link>
                           </div>
                         )}
 

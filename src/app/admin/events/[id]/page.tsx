@@ -181,7 +181,7 @@ export default function EditEventPage() {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.push('/admin/events')}
+            onClick={() => router.push('/admin/events/ticket-types')}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft className="w-5 h-5" />
